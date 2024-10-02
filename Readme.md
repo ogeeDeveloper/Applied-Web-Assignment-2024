@@ -31,8 +31,8 @@ Before you begin, ensure you have the following installed:
 Clone the project to your local machine.
 
 ```bash
-git clone <repository-url>
-cd <project_name>
+git clone https://github.com/ogeeDeveloper/Applied-Web-Assignment-2024.git
+cd Applied-Web-Assignment-2024
 
 ```
 
