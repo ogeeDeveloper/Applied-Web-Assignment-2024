@@ -1,71 +1,78 @@
 CREATE DATABASE crop_production_db;
 
+USE crop_production_db;
+
 -- Create the customer table
 CREATE TABLE customers (
-    customer_id int auto_increment primary key,
-    name varchar(255) not null,
-    email varchar(255) not null,
-    password varchar(255) not null,
-    address varchar(255),
-    phone_number varchar(10)
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    address VARCHAR(255),
+    phone_number VARCHAR(10)
 );
 
+-- Create the farmers table
 CREATE TABLE farmers (
-    farmer_id int auto_increment primary key,
-    name varchar(255) not null,
-    email varchar(255) not null,
-    address varchar(255),
-    farm_name varchar(255),
-    location varchar(255),
-    type_of_farmer varchar(255),
+    farmer_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    address VARCHAR(255),
+    farm_name VARCHAR(255),
+    location VARCHAR(255),
+    type_of_farmer VARCHAR(255),
     description TEXT,
-    phone_number varchar(10),
+    phone_number VARCHAR(10),
     media JSON
 );
 
+-- Create the products table
 CREATE TABLE products (
-    product_id int auto_increment primary key,
-    farmer_id int not null,
-    name varchar(255) not null,
-    category varchar(100) not null,
-    description text,
-    price_per_unit decimal(10, 2) not null,
-    stock_quantity int default 0 not null,
-    availability BOOLEAN default TRUE,
-    status varchar(50) not null,
-    delivery_option varchar(100) NOT NULL,
-    foreign key (farmer_id) references farmers(farmer_id)
+    product_id INT AUTO_INCREMENT PRIMARY KEY,
+    farmer_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    description TEXT,
+    price_per_unit DECIMAL(10, 2) NOT NULL,
+    stock_quantity INT DEFAULT 0 NOT NULL,
+    availability BOOLEAN DEFAULT TRUE,
+    status VARCHAR(50) NOT NULL,
+    delivery_option VARCHAR(100) NOT NULL,
+    FOREIGN KEY (farmer_id) REFERENCES farmers(farmer_id)
 );
 
+-- Create the crops table
 CREATE TABLE crops (
-    crop_id int auto_increment primary key,
-    product_id int not null,
-    planting_date date,
-    expected_harvest date,
-    growth_duration int,
-    current_status varchar(50),
-    foreign key (product_id) references products(farmer_id)
+    crop_id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    planting_date DATE,
+    expected_harvest DATE,
+    growth_duration INT,
+    current_status VARCHAR(50),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
 );
 
+-- Create the chemical_usage table
 CREATE TABLE chemical_usage (
-    chemical_usage_id int auto_increment primary key,
-    crop_id int not null,
-    chemical_name varchar(255) not null,
-    date_applied date,
-    purpose varchar(255),
-    amount_used decimal(10,2),
-    foreign key (crop_id) references crops(crop_id)
+    chemical_usage_id INT AUTO_INCREMENT PRIMARY KEY,
+    crop_id INT NOT NULL,
+    chemical_name VARCHAR(255) NOT NULL,
+    date_applied DATE,
+    purpose VARCHAR(255),
+    amount_used DECIMAL(10,2),
+    FOREIGN KEY (crop_id) REFERENCES crops(crop_id)
 );
 
+-- Create the orders table
 CREATE TABLE orders (
-    order_id int auto_increment primary key,
-    customer_id int not null,
-    product_id int not null,
-    quantity_ordered int not null,
-    total_price decimal(10,2) not null,
-    ordered_date date not null,
-    delivery_option varchar(50),
-    ordered_status varchar(50),
-    foreign key (customer_id) references customer(customer_id),
-    foreign key (product_id) references products(product_id),
+    order_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity_ordered INT NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    ordered_date DATE NOT NULL,
+    delivery_option VARCHAR(50),
+    ordered_status VARCHAR(50),
+    FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
 );
