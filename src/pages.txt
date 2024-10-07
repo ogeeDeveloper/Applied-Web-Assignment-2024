@@ -1,7 +1,7 @@
-Themes:
-https://themexriver.com/wp/broccoli/home-style-02/#
+Theme:
+shopery-html-dev
 
-PAGES
+==PAGES==
 
 Common:
 - Homepage
@@ -9,6 +9,7 @@ Common:
 - Checkout page
 - Login page
 - Sign Up Page
+- user-dashboard page
 
 
 Farmer:
