@@ -7,7 +7,9 @@ CREATE TABLE customers (
     email varchar(255) not null,
     password varchar(255) not null,
     address varchar(255),
-    phone_number varchar(10)
+    phone_number varchar(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE farmers (
@@ -20,7 +22,9 @@ CREATE TABLE farmers (
     type_of_farmer varchar(255),
     description TEXT,
     phone_number varchar(10),
-    media JSON
+    media JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE products (
@@ -34,7 +38,9 @@ CREATE TABLE products (
     availability BOOLEAN default TRUE,
     status varchar(50) not null,
     delivery_option varchar(100) NOT NULL,
-    foreign key (farmer_id) references farmers(farmer_id)
+    foreign key (farmer_id) references farmers(farmer_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE crops (
@@ -44,7 +50,9 @@ CREATE TABLE crops (
     expected_harvest date,
     growth_duration int,
     current_status varchar(50),
-    foreign key (product_id) references products(farmer_id)
+    foreign key (product_id) references products(farmer_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE chemical_usage (
@@ -54,7 +62,9 @@ CREATE TABLE chemical_usage (
     date_applied date,
     purpose varchar(255),
     amount_used decimal(10,2),
-    foreign key (crop_id) references crops(crop_id)
+    foreign key (crop_id) references crops(crop_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE orders (
@@ -68,4 +78,6 @@ CREATE TABLE orders (
     ordered_status varchar(50),
     foreign key (customer_id) references customer(customer_id),
     foreign key (product_id) references products(product_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

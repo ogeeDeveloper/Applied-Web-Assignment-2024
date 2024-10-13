@@ -1,0 +1,24 @@
+install pdo extension, php mailer
+
+docker-compose  run php composer install
+Add images field for product and category.
+
+Page Location: shopery-html-dev/main/home-03.html
+
+
+Website Name: 
+=== Common ===
+header.php
+footer.php
+
+=== PAGES ===
+Home
+Login/Logout
+Registration
+Cart
+Checkout
+Customer Dashboard
+Farmer Dashboard
+
+
+Order History
