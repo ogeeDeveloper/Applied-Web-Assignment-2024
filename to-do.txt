@@ -5,8 +5,15 @@ Add images field for product and category.
 
 Page Location: shopery-html-dev/main/home-03.html
 
+=== Path to assets: ===
+Images-public/images/
+CSS- public/css/
+Vendor CSS- public/lib/css
+JS- public/lib/js/
+
 
 Website Name: 
+
 === Common ===
 header.php
 footer.php

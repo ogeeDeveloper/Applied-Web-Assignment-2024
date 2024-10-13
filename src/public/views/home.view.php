@@ -5,20 +5,20 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta http-equiv="X-UA-Compatible" content="ie=edge" />
         <title>Homepage-03 | Shopery</title>
-        <link rel="icon" type="image/png" href="/images/favicon/favicon-16x16.png" />
-        <link rel="stylesheet" href="../lib/css/swiper-bundle.min.css" />
-        <link rel="stylesheet" href="../lib/css/bvselect.css" />
-        <link rel="stylesheet" href="../lib/css/venobox.css" />
-        <link rel="stylesheet" href="../lib/css/bootstrap.min.css" />
-        <link rel="stylesheet" href="../css/style.css" />  
+        <link rel="icon" type="image/png" href="public/images/favicon/favicon-16x16.png" />
+        <link rel="stylesheet" href="public/lib/css/swiper-bundle.min.css" />
+        <link rel="stylesheet" href="public/lib/css/bvselect.css" />
+        <link rel="stylesheet" href="public/lib/css/venobox.css" />
+        <link rel="stylesheet" href="public/lib/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="public/css/style.css" />  
     </head>
 
     <body>
-        <div class="loader">
+        <!-- <div class="loader">
             <div class="loader-icon">
-                <img src="src/images/loader.gif" alt="loader" />
+                <img src="../images/loader.gif" alt="loader" />
             </div>
-        </div>
+        </div> -->
 
         <!-- Header Section start -->
         <header class="header header--one header--three">
@@ -3904,14 +3904,14 @@
             </div>
         </div>
 
-        <script src="src/lib/js/jquery.min.js"></script>
-        <script src="src/lib/js/venobox.min.js"></script>
-        <script src="src/lib/js/swiper-bundle.min.js"></script>
-        <script src="src/lib/js/bvselect.js"></script>
-        <script src="src/lib/js/bootstrap.bundle.min.js"></script>
-        <script src="src/lib/js/jquery.syotimer.min.js"></script>
-        <script src="src/js/main.js"></script>
-        <script src="src/js/home3.js"></script>
+        <script src="public/lib/js/jquery.min.js"></script>
+        <script src="public/lib/js/venobox.min.js"></script>
+        <script src="public/lib/js/swiper-bundle.min.js"></script>
+        <script src="public/lib/js/bvselect.js"></script>
+        <script src="public/lib/js/bootstrap.bundle.min.js"></script>
+        <script src="public/lib/js/jquery.syotimer.min.js"></script>
+        <script src="public/js/main.js"></script>
+        <script src="public/js/home3.js"></script>
         <!-- Purchase Button -->
         <div class="templatecookie-btn">
             <a href="https://1.envato.market/kjkaBN" target="_blank" class="purchase-btn">
