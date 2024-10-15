@@ -29,3 +29,5 @@ Farmer Dashboard
 
 
 Order History
+Add category
+Handling image upload
