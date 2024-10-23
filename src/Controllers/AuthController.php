@@ -1,13 +1,27 @@
 <?php
-require_once __DIR__ . '/../config/db.php';
+namespace App\Controllers;
+
+use App\Models\Customer;    
+use App\Models\Farmer;    
+use App\Models\Admin;    
+use PDO;
+use PDOException;
+use App\Config\Database;
+
 class AuthController {
 
     private $db;
+    private $customerModel;
+    private $farmerModel;
+    private $adminModel; 
 
     public function __construct() {
         $database = new Database();
         $this->db = $database->getConnection();
-    }
+        $this->customerModel = new Customer($this->db);
+        $this->farmerModel = new Farmer($this->db);
+        $this->adminModel = new Admin($this->db);
+    }  
 
     public function register($name, $email, $password) {
         // Check if the email already exists
@@ -41,40 +55,39 @@ class AuthController {
     }
 
     public function login($email, $password) {
-        // Check if the email exists in the database
-        $query = "SELECT * FROM customers WHERE email = :email";
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':email', $email);
-        $stmt->execute();
-
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
+        // Check for customer
+        $user = $this->customerModel->findByEmail($email);
         if ($user && password_verify($password, $user['password'])) {
-            // Password is correct
-
-            // Start the session
-            session_start();
-
-            // Regenerate session ID to prevent session fixation attacks
-            session_regenerate_id(true);
-
-            // Store the user's ID in the session
-            $_SESSION['user_id'] = $user['customer_id'];
-
-            // Set a session cookie
-            setcookie("session_cookie", session_id(), [
-                'expires' => time() + 3600,  // 1 hour expiry
-                'path' => '/',
-                'secure' => true,   // Use secure flag for HTTPS only
-                'httponly' => true, // Prevent JavaScript from accessing the cookie
-                'samesite' => 'Strict' // Helps prevent CSRF
-            ]);
-
-            echo "Login successful!";
-        } else {
-            // Invalid credentials
-            echo "Invalid email or password.";
+            // Check role and start a session
+            $this->startSession($user, 'customer');
+            echo "Customer login successful!";
+            return;
         }
+
+        // Check for farmer
+        $farmer = $this->farmerModel->findByEmail($email);
+        if ($farmer && password_verify($password, $farmer['password'])) {
+            $this->startSession($farmer, 'farmer');
+            echo "Farmer login successful!";
+            return;
+        }
+
+        // Check for admin
+        $admin = $this->adminModel->findByEmail($email);
+        if ($admin && password_verify($password, $admin['password'])) {
+            $this->startSession($admin, 'admin');
+            echo "Admin login successful!";
+            return;
+        }
+
+        echo "Invalid email or password.";
+    }
+
+    private function startSession($user, $role) {
+        session_start();
+        session_regenerate_id(true);
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['role'] = $role;
     }
 
     public function isAuthenticated() {

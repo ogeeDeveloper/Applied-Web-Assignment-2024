@@ -1,4 +1,10 @@
 <?php
+namespace App\Config;
+
+use PDO;
+use PDOException;
+
+// Database configuration class
 class Database {
     private $host = "mysql";
     private $db_name;
@@ -18,7 +24,9 @@ class Database {
             $this->conn = new PDO("mysql:host=" . $this->host . ";dbname=" . $this->db_name, $this->username, $this->password);
             $this->conn->exec("set names utf8");
         } catch(PDOException $exception) {
-            echo "Connection error: " . $exception->getMessage();
+            error_log($exception->getMessage());
+            die('Database connection could not be established.');
+            // echo "Connection error: " . $exception->getMessage();
         }
 
         return $this->conn;

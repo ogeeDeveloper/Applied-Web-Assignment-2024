@@ -1,8 +1,7 @@
 CREATE DATABASE crop_production_db;
 
--- Create the customer table
 CREATE TABLE customers (
-    customer_id int auto_increment primary key,
+    customer_trn int auto_increment primary key,
     name varchar(255) not null,
     email varchar(255) not null,
     password varchar(255) not null,
@@ -13,7 +12,7 @@ CREATE TABLE customers (
 );
 
 CREATE TABLE farmers (
-    farmer_id int auto_increment primary key,
+    farmer_trn int auto_increment primary key,
     name varchar(255) not null,
     email varchar(255) not null,
     address varchar(255),
@@ -29,7 +28,7 @@ CREATE TABLE farmers (
 
 CREATE TABLE products (
     product_id int auto_increment primary key,
-    farmer_id int not null,
+    farmer_trn int not null,
     name varchar(255) not null,
     category varchar(100) not null,
     description text,
@@ -38,7 +37,7 @@ CREATE TABLE products (
     availability BOOLEAN default TRUE,
     status varchar(50) not null,
     delivery_option varchar(100) NOT NULL,
-    foreign key (farmer_id) references farmers(farmer_id),
+    foreign key (farmer_trn) references farmers(farmer_trn),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -50,7 +49,7 @@ CREATE TABLE crops (
     expected_harvest date,
     growth_duration int,
     current_status varchar(50),
-    foreign key (product_id) references products(farmer_id),
+    foreign key (product_id) references products(farmer_trn),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -69,15 +68,26 @@ CREATE TABLE chemical_usage (
 
 CREATE TABLE orders (
     order_id int auto_increment primary key,
-    customer_id int not null,
+    customer_trn int not null,
     product_id int not null,
     quantity_ordered int not null,
     total_price decimal(10,2) not null,
     ordered_date date not null,
     delivery_option varchar(50),
     ordered_status varchar(50),
-    foreign key (customer_id) references customer(customer_id),
+    foreign key (customer_trn) references customer(customer_trn),
     foreign key (product_id) references products(product_id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create the admins table
+CREATE TABLE admins (
+    admin_id int auto_increment primary key,
+    name varchar(255) not null,
+    email varchar(255) not null,
+    password varchar(255) not null,
+    role varchar(50) not null,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
