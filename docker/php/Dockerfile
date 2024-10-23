@@ -24,7 +24,7 @@ WORKDIR /var/www
 COPY composer.json composer.lock ./
 
 # Update composer lock file to ensure dependencies match
-RUN composer update --no-dev
+RUN composer install --no-dev --optimize-autoloader
 
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
@@ -35,7 +35,8 @@ COPY src /var/www/src
 COPY config /var/www/config
 
 # Fix permissions
-RUN chown -R www-data:www-data /var/www
+# RUN chown -R www-data:www-data /var/www
+RUN chown -R www-data:www-data /var/www && chmod -R 755 /var/www
 
 # Expose port 9000 and start php-fpm server
 EXPOSE 9000
