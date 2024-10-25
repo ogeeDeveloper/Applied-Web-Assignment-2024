@@ -7,8 +7,6 @@ ini_set('display_errors', 1);
 define('APP_ROOT', dirname(__DIR__));
 
 // Initialize autoloading and required components
-// require_once APP_ROOT . '/vendor/autoload.php';
-
 try {
     require_once APP_ROOT . '/vendor/autoload.php';
 } catch (Exception $e) {
@@ -52,9 +50,6 @@ try {
     }
 
     // Initialize database connection
-    // $database = new Database();
-    // $db = $database->getConnection();
-
     try {
         $database = new Database();
         $db = $database->getConnection();
