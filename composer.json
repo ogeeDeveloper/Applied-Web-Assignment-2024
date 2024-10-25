@@ -1,13 +1,21 @@
 {
     "name": "applied_web_development_assignment/php",
     "description": "A PHP project for the applied web development assignment. This web app will connect consumers to farmers products and allow those consumers to place orders based on the availability.",
+    "type": "project",
     "require": {
         "phpmailer/phpmailer": "^6.9.1",
-        "monolog/monolog": "^3.7.0"
+        "monolog/monolog": "^3.7.0",
+        "vlucas/phpdotenv": "^5.6.1"
     },
     "autoload": {
         "psr-4": {
             "App\\": "src/"
         }
-    }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
 }

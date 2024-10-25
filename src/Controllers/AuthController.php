@@ -1,139 +1,160 @@
 <?php
 namespace App\Controllers;
 
-require_once __DIR__ . '/../../config/logger.php';
-
-use App\Models\Customer;    
-use App\Models\Farmer;    
-use App\Models\Admin;    
+use App\Models\User;
+use PDO;
 use PDOException;
-use App\Config\Database;
-
-
 
 class AuthController {
-
-    private $db;
-    private $customerModel;
-    private $farmerModel;
-    private $adminModel; 
+    private PDO $db;
+    private User $userModel;
     private $logger;
 
-    public function __construct() {
-        $this->logger = getLogger('AuthController');  // Initialize logger
-        $database = new Database();
-        $this->db = $database->getConnection();
-        $this->customerModel = new Customer($this->db);
-        $this->farmerModel = new Farmer($this->db);
-        $this->adminModel = new Admin($this->db);
-    }  
+    public function __construct(PDO $db, $logger) {
+        $this->db = $db;
+        $this->userModel = new User($db, $logger);
+        $this->logger = $logger;
+    }
 
-    public function register($name, $email, $password) {
+    public function register(array $data): array {
         try {
-            // Logging registration attempt
-            $this->logger->info("Attempting to register user with email: {$email}");
+            $this->logger->info("Attempting to register user with email: {$data['email']}");
 
-            // Check if the email already exists
-            $query = "SELECT * FROM customers WHERE email = :email";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':email', $email);
-            $stmt->execute();
-
-            if ($stmt->rowCount() > 0) {
-                $this->logger->warning("Registration failed: Email already in use - {$email}");
-                echo "Email already in use.";
-                return false;
+            if ($this->userModel->findByEmail($data['email'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Email already in use'
+                ];
             }
 
-            // Hash the password
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-            // Insert the user into the database
-            $query = "INSERT INTO customers (name, email, password) VALUES (:name, :email, :password)";
-            $stmt = $this->db->prepare($query);
-            $stmt->bindParam(':name', $name);
-            $stmt->bindParam(':email', $email);
-            $stmt->bindParam(':password', $hashed_password);
-
-            if ($stmt->execute()) {
-                $this->logger->info("Registration successful for user with email: {$email}");
-                echo "Registration successful!";
-                return true;
-            } else {
-                $this->logger->error("Registration failed for user with email: {$email}");
-                echo "Registration failed.";
-                return false;
+            // Validate role
+            if (!in_array($data['role'], ['customer', 'farmer', 'admin'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Invalid role specified'
+                ];
             }
+
+            $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
+            
+            $userData = [
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'password' => $hashedPassword,
+                'role' => $data['role']
+            ];
+
+            // Add role-specific data
+            if ($data['role'] === 'farmer') {
+                $userData['farm_name'] = $data['farm_name'] ?? null;
+                $userData['location'] = $data['location'] ?? null;
+                $userData['type_of_farmer'] = $data['type_of_farmer'] ?? null;
+            }
+
+            $userId = $this->userModel->create($userData);
+
+            if ($userId) {
+                $this->logger->info("Registration successful for user: {$data['email']}");
+                return [
+                    'success' => true,
+                    'message' => 'Registration successful',
+                    'user_id' => $userId
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Registration failed'
+            ];
+
         } catch (PDOException $e) {
-            $this->logger->error("Database error during registration: " . $e->getMessage());
-            echo "An error occurred.";
+            $this->logger->error("Registration error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'An error occurred during registration'
+            ];
         }
     }
 
-    public function login($email, $password) {
-        // Logging the login attempt
-        $this->logger->info("Attempting to login user with email: {$email}");
+    public function login(string $email, string $password): array {
+        try {
+            $user = $this->userModel->findByEmail($email);
 
-        // Check for customer
-        $user = $this->customerModel->findByEmail($email);
-        if ($user && password_verify($password, $user['password'])) {
-            // Check role and start a session
-            $this->startSession($user, 'customer');
-            $this->logger->info("Login successful for customer: {$email}");
-            echo "Customer login successful!";
-            return;
+            if (!$user || !password_verify($password, $user['password'])) {
+                return [
+                    'success' => false,
+                    'message' => 'Invalid credentials'
+                ];
+            }
+
+            $this->startSession($user);
+            
+            $this->logger->info("Login successful for user: {$email}");
+            return [
+                'success' => true,
+                'message' => 'Login successful',
+                'user' => [
+                    'id' => $user['id'],
+                    'name' => $user['name'],
+                    'email' => $user['email'],
+                    'role' => $user['role']
+                ]
+            ];
+
+        } catch (PDOException $e) {
+            $this->logger->error("Login error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'An error occurred during login'
+            ];
         }
-
-        // Check for farmer
-        $farmer = $this->farmerModel->findByEmail($email);
-        if ($farmer && password_verify($password, $farmer['password'])) {
-            $this->startSession($farmer, 'farmer');
-            $this->logger->info("Login successful for farmer: {$email}");
-            echo "Farmer login successful!";
-            return;
-        }
-
-        // Check for admin
-        $admin = $this->adminModel->findByEmail($email);
-        if ($admin && password_verify($password, $admin['password'])) {
-            $this->startSession($admin, 'admin');
-            $this->logger->info("Login successful for admin: {$email}");
-            echo "Admin login successful!";
-            return;
-        }
-
-        echo "Invalid email or password.";
     }
 
-    private function startSession($user, $role) {
+    private function startSession(array $user): void {
         session_start();
         session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];
-        $_SESSION['role'] = $role;
+        $_SESSION['user_role'] = $user['role'];
+        $_SESSION['user_email'] = $user['email'];
     }
 
-    public function isAuthenticated() {
+    public function logout(): array {
         session_start();
-
-        // Check if the user is logged in by checking the session
-        if (isset($_SESSION['user_id'])) {
-            // User is authenticated
-            return true;
-        } else {
-            // User is not authenticated
-            return false;
-        }
-    }
-
-    public function logout() {
-        // Start session and clear all session data
-        session_start();
-        session_unset();
         session_destroy();
+        return [
+            'success' => true,
+            'message' => 'Logged out successfully'
+        ];
+    }
 
-        // Clear the session cookie
-        setcookie("session_cookie", "", time() - 3600, '/');
+    public function getCurrentUser(): ?array {
+        session_start();
+        if (isset($_SESSION['user_id'])) {
+            return $this->userModel->findById($_SESSION['user_id']);
+        }
+        return null;
+    }
 
-        echo "Logged out successfully.";
+    public function isAuthenticated(): bool {
+        session_start();
+        return isset($_SESSION['user_id']);
+    }
+
+    public function hasRole(string $role): bool {
+        session_start();
+        return isset($_SESSION['user_role']) && $_SESSION['user_role'] === $role;
+    }
+
+    public function getRedirectUrl(): string {
+        if (!isset($_SESSION['user_role'])) {
+            return '/login';
+        }
+
+        return match($_SESSION['user_role']) {
+            'admin' => '/admin/dashboard',
+            'farmer' => '/farmer/dashboard',
+            'customer' => '/customer/dashboard',
+            default => '/login'
+        };
     }
 }
