@@ -1,43 +1,39 @@
-# Use the official PHP 8.3 FPM image as the base
-FROM php:8.3-fpm
+FROM php:8.2-fpm
 
-# Install system dependencies and PHP extensions
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    zip \
-    libzip-dev \
-    unzip \
-    curl \
     git \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql zip \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    default-mysql-client
 
-# Install Composer globally
+# Clear cache
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+
+# Get latest Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set the working directory
+# Set working directory
 WORKDIR /var/www
 
-# Copy composer files
-COPY composer.json composer.lock ./
+# Copy composer.json only (not the lock file)
+COPY composer.json .
 
-# Run composer update to update the lock file inside the container
-RUN composer update --no-scripts --no-dev
+# Install dependencies and generate lock file
+RUN composer update --no-scripts --no-autoloader
 
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-scripts
-
-# Copy application files
+# Copy existing application directory
 COPY . .
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www \
-    && chmod -R 777 /var/www/storage
+# Generate autoload files
+RUN composer dump-autoload --optimize
 
-# Expose port 9000 and start php-fpm server
-EXPOSE 9000
-CMD ["php-fpm"]
+# Fix permissions
+RUN chown -R www-data:www-data /var/www

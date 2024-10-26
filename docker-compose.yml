@@ -3,25 +3,26 @@ services:
     build:
       context: .
       dockerfile: ./docker/php/Dockerfile
+    container_name: crop_production_php
     volumes:
       - ./src:/var/www/src
       - ./public:/var/www/public
       - ./config:/var/www/config
-      - ./storage:/var/www/storage
       - ./vendor:/var/www/vendor
-      - ./.env:/var/www/.env  
+      - ./docker:/var/www/docker
+      - ./.env:/var/www/.env
     environment:
       MYSQL_HOST: mysql
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "9000:9000"
-    networks:
-      - app-net
+      PHP_IDE_CONFIG: "serverName=Docker"
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - app-net
+    command: sh /var/www/docker/php/docker-entrypoint.sh
 
   nginx:
     image: nginx:latest
@@ -37,24 +38,52 @@ services:
       - php
 
   mysql:
-    image: mysql:8.1
-    container_name: mysql
+    image: mysql:8.0
+    container_name: crop_production_mysql
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    volumes:
-      - mysql_data:/var/lib/mysql
+      MYSQL_ROOT_HOST: "%"
+      TZ: UTC
+    command: [
+      '--character-set-server=utf8mb4',
+      '--collation-server=utf8mb4_unicode_ci',
+      '--default-authentication-plugin=caching_sha2_password',
+      '--bind-address=0.0.0.0',
+      '--skip-name-resolve'
+    ]
     ports:
       - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - app-net
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: crop_production_phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_USER=admin
+      - PMA_PASSWORD=Test@000
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - app-net
 
 networks:
   app-net:
