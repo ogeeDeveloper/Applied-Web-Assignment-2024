@@ -62,18 +62,3 @@ SELECT r.id, p.id
 FROM roles r, permissions p 
 WHERE r.name = 'customer' 
 AND p.name IN ('manage_profile');
-
--- V3__seed_initial_data.sql
--- Insert sample admin
-INSERT INTO users (name, email, password, role) VALUES
-('Admin User', 'admin@cropproduction.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
-
--- Insert sample farmers
-INSERT INTO users (name, email, password, role) VALUES
-('John Farmer', 'john@farm.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'farmer'),
-('Mary Farmer', 'mary@farm.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'farmer');
-
--- Insert sample customers
-INSERT INTO users (name, email, password, role) VALUES
-('Customer One', 'customer1@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'customer'),
-('Customer Two', 'customer2@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'customer');

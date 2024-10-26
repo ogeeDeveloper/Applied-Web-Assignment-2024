@@ -1,7 +1,10 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
 
 // Define the application root directory
 define('APP_ROOT', dirname(__DIR__));
@@ -77,11 +80,6 @@ try {
     exit;
 }
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
 // Get request method and URI
 $request_method = $_SERVER['REQUEST_METHOD'];
 $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -106,53 +104,116 @@ try {
     switch ($route) {
         // Public routes
         case 'GET /':
-        case 'GET /index.php':
-            require APP_ROOT . '/src/Views/home.view.php';
-            break;
+            case 'GET /index.php':
+                $controller = new \App\Controllers\HomeController($db, $logger);
+                $controller->index();
+                break;
 
         // Authentication routes
         case 'GET /login':
-        case 'GET /login.php':
-            if ($authController->isAuthenticated()) {
-                header('Location: ' . $authController->getRedirectUrl());
-                exit;
-            }
-            require APP_ROOT . '/src/Views/auth/login.php';
+            case 'GET /login.php':
+                if ($authController->isAuthenticated()) {
+                    header('Location: ' . $authController->getRedirectUrl());
+                    exit;
+                }
+                $controller = new \App\Controllers\AuthController($db, $logger);
+                $controller->loginForm();
+                break;
+
+        case 'POST /api/auth/login':
+            header('Content-Type: application/json');
+            $authController = new \App\Controllers\Api\AuthController($db, $logger);
+            $authController->login();
+            exit();
+            break;
+        
+        // Customer registration
+        case 'GET /register':
+            $authController->customerRegistrationForm();
             break;
 
-        case 'POST /login':
-        case 'POST /login.php':
-            $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
-            $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-            
-            if (!$email || !$password) {
-                $_SESSION['error'] = 'Invalid input data';
-                header('Location: /login');
-                exit;
-            }
+        // case 'POST /register':
+        //     $response = $authController->register(array_merge($_POST, ['role' => 'customer']));
+        //     if ($response['success']) {
+        //         $_SESSION['success'] = $response['message'];
+        //         header('Location: /login');
+        //     } else {
+        //         $_SESSION['error'] = $response['message'];
+        //         header('Location: /register');
+        //     }
+        //     exit;
+        //     break;
 
-            $result = $authController->login($email, $password);
-            if ($result['success']) {
-                header('Location: ' . $authController->getRedirectUrl());
-            } else {
-                $_SESSION['error'] = $result['message'];
+        case 'POST /api/auth/customers/register':
+            header('Content-Type: application/json');
+            $authController = new \App\Controllers\AuthController($db, $logger);
+            $result = $authController->register(array_merge($_POST, ['role' => 'customer']));
+            echo json_encode($result);
+            exit();
+    
+        // Farmer registration
+        case 'GET /register/farmer':
+            $authController->farmerRegistrationForm();
+            break;
+
+        case 'POST /register/farmer':
+            $response = $authController->register(array_merge($_POST, ['role' => 'farmer']));
+            if ($response['success']) {
+                $_SESSION['success'] = $response['message'];
                 header('Location: /login');
+            } else {
+                $_SESSION['error'] = $response['message'];
+                header('Location: /register/farmer');
             }
             exit;
             break;
 
-        // ... rest of your routes ...
+        case 'GET /logout':
+            $authController->logout();
+            header('Location: /login');
+            exit;
+            break;
+        
+         // Dashboard routes
+        case 'GET /customer/dashboard':
+            if ($authController->hasRole('customer')) {
+                $dashboardController->customerDashboard();
+            } else {
+                header('Location: /unauthorized');
+                exit;
+            }
+            break;
+
+        case 'GET /farmer/dashboard':
+            if ($authController->hasRole('farmer')) {
+                $dashboardController->farmerDashboard();
+            } else {
+                header('Location: /unauthorized');
+                exit;
+            }
+            break;
+
+        case 'GET /admin/dashboard':
+            if ($authController->hasRole('admin')) {
+                $dashboardController->adminDashboard();
+            } else {
+                header('Location: /unauthorized');
+                exit;
+            }
+            break;
 
         // Error Routes
         case 'GET /unauthorized':
             http_response_code(403);
-            require APP_ROOT . '/src/Views/errors/403.php';
+            $controller = new \App\Controllers\ErrorController($db, $logger);
+            $controller->unauthorized();
             break;
 
         default:
             $logger->warning("404 Not Found: {$request_uri}");
             http_response_code(404);
-            require APP_ROOT . '/src/Views/errors/404.php';
+            $controller = new \App\Controllers\ErrorController($db, $logger);
+            $controller->notFound();
             break;
     }
 } catch (Exception $e) {

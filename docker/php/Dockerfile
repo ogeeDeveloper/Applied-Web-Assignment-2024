@@ -22,7 +22,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 
 # Copy composer files
-COPY composer.json composer.* ./
+COPY composer.json composer.lock ./
+
+# Run composer update to update the lock file inside the container
+RUN composer update --no-scripts --no-dev
 
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader --no-scripts

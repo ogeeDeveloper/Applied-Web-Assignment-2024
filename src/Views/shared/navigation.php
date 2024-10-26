@@ -22,7 +22,7 @@ $mainNav = [
         'url' => '/farmers',
         'submenu' => [
             'Meet Our Farmers' => '/farmers/meet',
-            'Become a Seller' => '/farmers/register',
+            'Become a Seller' => '/api/auth/farmers/register',
             'Farm Directory' => '/farmers/directory'
         ]
     ],

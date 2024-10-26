@@ -3,17 +3,13 @@
 namespace App\Controllers;
 
 use App\Models\Farmer;
-use App\Config\Database;
+use PDO;
 
-class FarmerController {
-    private $db;
+class FarmerController extends BaseController {
     private $farmerModel;
 
-    public function __construct() {
-        $database = new Database();
-        $this->db = $database->getConnection();
-        $this->farmerModel = new Farmer($this->db);
+    public function __construct(PDO $db, $logger) {
+        parent::__construct($db, $logger);
+        $this->farmerModel = new Farmer($db, $logger);
     }
-
-    // Farmer-specific methods
 }

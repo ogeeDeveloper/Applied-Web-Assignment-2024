@@ -5,10 +5,8 @@ use App\Models\User;
 use PDO;
 use PDOException;
 
-class AuthController {
-    private PDO $db;
+class AuthController extends BaseController {
     private User $userModel;
-    private $logger;
 
     public function __construct(PDO $db, $logger) {
         $this->db = $db;
@@ -16,6 +14,33 @@ class AuthController {
         $this->logger = $logger;
     }
 
+    public function loginForm() {
+        if ($this->isAuthenticated()) {
+            header('Location: ' . $this->getRedirectUrl());
+            exit;
+        }
+        $this->render('auth/login', [], 'Login - AgriKonnect');
+    }
+
+    public function farmerRegistrationForm() {
+        if ($this->isAuthenticated()) {
+            header('Location: ' . $this->getRedirectUrl());
+            exit;
+        }
+         // Set the content type to text/html
+        header('Content-Type: text/html');
+        $this->render('auth/farmer-register', [], 'Register - AgriKonnect');
+    }
+
+    public function customerRegistrationForm() {
+        if ($this->isAuthenticated()) {
+            header('Location: ' . $this->getRedirectUrl());
+            exit;
+        }
+        $this->render('auth/signup', [], 'Sign Up - AgriKonnect');
+    }
+
+    // Register a new user (customer/farmer)
     public function register(array $data): array {
         try {
             $this->logger->info("Attempting to register user with email: {$data['email']}");
@@ -28,7 +53,7 @@ class AuthController {
             }
 
             // Validate role
-            if (!in_array($data['role'], ['customer', 'farmer', 'admin'])) {
+            if (!in_array($data['role'], ['customer', 'farmer'])) {
                 return [
                     'success' => false,
                     'message' => 'Invalid role specified'
@@ -36,7 +61,7 @@ class AuthController {
             }
 
             $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
-            
+
             $userData = [
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -44,29 +69,32 @@ class AuthController {
                 'role' => $data['role']
             ];
 
-            // Add role-specific data
-            if ($data['role'] === 'farmer') {
-                $userData['farm_name'] = $data['farm_name'] ?? null;
-                $userData['location'] = $data['location'] ?? null;
-                $userData['type_of_farmer'] = $data['type_of_farmer'] ?? null;
-            }
+            $this->db->beginTransaction();
 
-            $userId = $this->userModel->create($userData);
+            try {
+                // Create user account
+                $userId = $this->userModel->create($userData);
 
-            if ($userId) {
+                if ($data['role'] === 'farmer') {
+                    // Register farmer-specific data
+                    $this->registerFarmerProfile($userId, $data);
+                } elseif ($data['role'] === 'customer') {
+                    // Register customer-specific data
+                    $this->registerCustomerProfile($userId, $data);
+                }
+
+                $this->db->commit();
+
                 $this->logger->info("Registration successful for user: {$data['email']}");
                 return [
                     'success' => true,
                     'message' => 'Registration successful',
                     'user_id' => $userId
                 ];
+            } catch (\Exception $e) {
+                $this->db->rollBack();
+                throw $e;
             }
-
-            return [
-                'success' => false,
-                'message' => 'Registration failed'
-            ];
-
         } catch (PDOException $e) {
             $this->logger->error("Registration error: " . $e->getMessage());
             return [
@@ -74,6 +102,55 @@ class AuthController {
                 'message' => 'An error occurred during registration'
             ];
         }
+    }
+
+    public function registerFarmerProfile(int $userId, array $data): void {
+        $farmerData = [
+            'user_id' => $userId,
+            'farm_name' => $data['farm_name'],
+            'location' => $data['location'],
+            'farm_type' => $data['farm_type'],
+            'farm_size' => $data['farm_size'],
+            'primary_products' => $data['primary_products'],
+            'farming_experience' => $data['farming_experience'],
+            'organic_certified' => isset($data['organic_certified']) ? 1 : 0,
+            'phone_number' => $data['phone_number'],
+            'additional_info' => $data['additional_info'] ?? null,
+            'status' => 'pending'
+        ];
+
+        $stmt = $this->db->prepare("
+            INSERT INTO farmer_profiles (
+                user_id, farm_name, location, farm_type, farm_size,
+                primary_products, farming_experience, organic_certified,
+                phone_number, additional_info, status, created_at
+            ) VALUES (
+                :user_id, :farm_name, :location, :farm_type, :farm_size,
+                :primary_products, :farming_experience, :organic_certified,
+                :phone_number, :additional_info, :status, NOW()
+            )
+        ");
+
+        $stmt->execute($farmerData);
+    }
+
+    public function registerCustomerProfile(int $userId, array $data): void {
+        $customerData = [
+            'user_id' => $userId,
+            'address' => $data['address'] ?? null,
+            'phone_number' => $data['phone_number'] ?? null,
+            'preferences' => json_encode($data['preferences'] ?? [])
+        ];
+
+        $stmt = $this->db->prepare("
+            INSERT INTO customer_profiles (
+                user_id, address, phone_number, preferences, created_at
+            ) VALUES (
+                :user_id, :address, :phone_number, :preferences, NOW()
+            )
+        ");
+
+        $stmt->execute($customerData);
     }
 
     public function login(string $email, string $password): array {
@@ -88,7 +165,7 @@ class AuthController {
             }
 
             $this->startSession($user);
-            
+
             $this->logger->info("Login successful for user: {$email}");
             return [
                 'success' => true,
@@ -100,7 +177,6 @@ class AuthController {
                     'role' => $user['role']
                 ]
             ];
-
         } catch (PDOException $e) {
             $this->logger->error("Login error: " . $e->getMessage());
             return [
