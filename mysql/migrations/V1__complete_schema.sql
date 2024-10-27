@@ -218,7 +218,7 @@ CREATE TABLE orders (
     payment_status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending',
     total_amount DECIMAL(10,2) NOT NULL,
     delivery_address TEXT NOT NULL,
-    delivery_notes TEXT,
+    delivery_notes TEXT DEFAULT NULL,
     ordered_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

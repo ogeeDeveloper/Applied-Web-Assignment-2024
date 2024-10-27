@@ -103,12 +103,6 @@ class User {
         }
     }
 
-    private function getTotalFarmers(): int {
-        $sql = "SELECT COUNT(*) FROM farmers";
-        $stmt = $this->db->query($sql);
-        return (int)$stmt->fetchColumn();
-    }
-
     private function getActiveFarmers(): int {
         $sql = "SELECT COUNT(*) 
                 FROM farmers 
@@ -121,25 +115,6 @@ class User {
         return (int)$stmt->fetchColumn();
     }
 
-    private function getTopPerformingFarmers(int $limit = 5): array {
-        $sql = "SELECT f.*, 
-                       COUNT(DISTINCT o.order_id) as total_orders,
-                       SUM(oi.total_price) as total_revenue
-                FROM farmers f
-                JOIN products p ON f.farmer_trn = p.farmer_trn
-                JOIN order_items oi ON p.product_id = oi.product_id
-                JOIN orders o ON oi.order_id = o.order_id
-                WHERE o.ordered_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
-                GROUP BY f.farmer_trn
-                ORDER BY total_revenue DESC
-                LIMIT :limit";
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
     private function getRecentlyJoinedFarmers(int $limit = 5): array {
         $sql = "SELECT * 
                 FROM farmers 
@@ -150,5 +125,268 @@ class User {
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateFarmerStatus(int $farmerId, string $status, int $adminId): bool {
+        try {
+            $this->db->beginTransaction();
+
+            // Update farmer status
+            $sql = "UPDATE farmer_profiles 
+                    SET status = :status,
+                        updated_at = NOW() 
+                    WHERE farmer_id = :farmer_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'status' => $status,
+                'farmer_id' => $farmerId
+            ]);
+
+            // Log the status change
+            $this->logStatusChange('farmer', $farmerId, $status, $adminId);
+
+            $this->db->commit();
+            return true;
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            $this->logger->error("Error updating farmer status: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateUserStatus(int $userId, string $status, string $reason, int $adminId): bool {
+        try {
+            $this->db->beginTransaction();
+
+            // Update user status
+            $sql = "UPDATE users 
+                    SET status = :status 
+                    WHERE id = :user_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'status' => $status,
+                'user_id' => $userId
+            ]);
+
+            // Log the status change with reason
+            $this->logStatusChange('user', $userId, $status, $adminId, $reason);
+
+            $this->db->commit();
+            return true;
+        } catch (\PDOException $e) {
+            $this->db->rollBack();
+            $this->logger->error("Error updating user status: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getTotalFarmers(): int {
+        try {
+            $sql = "SELECT COUNT(*) FROM farmer_profiles";
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting total farmers: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function getPendingFarmersCount(): int {
+        try {
+            $sql = "SELECT COUNT(*) 
+                    FROM farmer_profiles 
+                    WHERE status = 'pending'";
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting pending farmers count: " . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function getTopPerformingFarmers(int $limit = 5): array {
+        try {
+            $sql = "SELECT 
+                        f.*,
+                        COUNT(DISTINCT o.order_id) as total_orders,
+                        SUM(oi.total_price) as total_revenue,
+                        AVG(p.stock_quantity) as avg_stock_level
+                    FROM farmer_profiles f
+                    JOIN products p ON f.farmer_id = p.farmer_id
+                    LEFT JOIN order_items oi ON p.product_id = oi.product_id
+                    LEFT JOIN orders o ON oi.order_id = o.order_id
+                    WHERE f.status = 'active'
+                    AND o.ordered_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+                    GROUP BY f.farmer_id
+                    ORDER BY total_revenue DESC
+                    LIMIT :limit";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting top performing farmers: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getUserAuditLog(int $userId, string $startDate, string $endDate): array {
+        try {
+            $sql = "SELECT 
+                        al.*,
+                        u.name as actor_name,
+                        u.role as actor_role
+                    FROM audit_logs al
+                    JOIN users u ON al.actor_id = u.id
+                    WHERE al.user_id = :user_id
+                    AND al.created_at BETWEEN :start_date AND :end_date
+                    ORDER BY al.created_at DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'user_id' => $userId,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting user audit log: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function logStatusChange(string $entityType, int $entityId, string $status, int $adminId, string $reason = null): void {
+        $sql = "INSERT INTO status_change_logs (
+                    entity_type, entity_id, status, changed_by, reason, created_at
+                ) VALUES (
+                    :entity_type, :entity_id, :status, :changed_by, :reason, NOW()
+                )";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'status' => $status,
+            'changed_by' => $adminId,
+            'reason' => $reason
+        ]);
+    }
+
+    public function getAllCustomers(int $limit = null, int $offset = null): array {
+        try {
+            $sql = "SELECT u.*, cp.*
+                    FROM users u
+                    JOIN customer_profiles cp ON u.id = cp.user_id
+                    WHERE u.role = 'customer'
+                    ORDER BY u.created_at DESC";
+
+            if ($limit !== null) {
+                $sql .= " LIMIT :limit";
+                if ($offset !== null) {
+                    $sql .= " OFFSET :offset";
+                }
+            }
+
+            $stmt = $this->db->prepare($sql);
+            
+            if ($limit !== null) {
+                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+                if ($offset !== null) {
+                    $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+                }
+            }
+
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting all customers: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getAllFarmers(int $limit = null, int $offset = null): array {
+        try {
+            $sql = "SELECT u.*, fp.*, 
+                    COUNT(DISTINCT p.product_id) as total_products,
+                    COUNT(DISTINCT o.order_id) as total_orders
+                    FROM users u
+                    JOIN farmer_profiles fp ON u.id = fp.user_id
+                    LEFT JOIN products p ON fp.farmer_id = p.farmer_id
+                    LEFT JOIN order_items oi ON p.product_id = oi.product_id
+                    LEFT JOIN orders o ON oi.order_id = o.order_id
+                    WHERE u.role = 'farmer'
+                    GROUP BY u.id, fp.farmer_id
+                    ORDER BY u.created_at DESC";
+
+            if ($limit !== null) {
+                $sql .= " LIMIT :limit";
+                if ($offset !== null) {
+                    $sql .= " OFFSET :offset";
+                }
+            }
+
+            $stmt = $this->db->prepare($sql);
+            
+            if ($limit !== null) {
+                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+                if ($offset !== null) {
+                    $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+                }
+            }
+
+            $stmt->execute();
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting all farmers: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getUserStats(): array {
+        try {
+            $stats = [
+                'total_users' => 0,
+                'total_customers' => 0,
+                'total_farmers' => 0,
+                'active_users' => 0,
+                'new_users_today' => 0,
+                'new_users_this_week' => 0,
+                'new_users_this_month' => 0
+            ];
+
+            // Get total counts
+            $sql = "SELECT 
+                    COUNT(*) as total_users,
+                    SUM(CASE WHEN role = 'customer' THEN 1 ELSE 0 END) as total_customers,
+                    SUM(CASE WHEN role = 'farmer' THEN 1 ELSE 0 END) as total_farmers,
+                    SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_users
+                    FROM users";
+            $stmt = $this->db->query($sql);
+            $totals = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $stats = array_merge($stats, $totals);
+
+            // Get new users counts
+            $sql = "SELECT 
+                    SUM(CASE WHEN created_at >= CURRENT_DATE THEN 1 ELSE 0 END) as new_today,
+                    SUM(CASE WHEN created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY) THEN 1 ELSE 0 END) as new_this_week,
+                    SUM(CASE WHEN created_at >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 ELSE 0 END) as new_this_month
+                    FROM users";
+            $stmt = $this->db->query($sql);
+            $newUsers = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            $stats['new_users_today'] = $newUsers['new_today'];
+            $stats['new_users_this_week'] = $newUsers['new_this_week'];
+            $stats['new_users_this_month'] = $newUsers['new_this_month'];
+
+            return $stats;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting user stats: " . $e->getMessage());
+            return [];
+        }
     }
 }

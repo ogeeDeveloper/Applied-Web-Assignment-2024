@@ -94,4 +94,6 @@ INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_price
 (2, 2, 5, 3.99, 19.95),
 (3, 1, 4, 2.99, 11.96);
 
+-- Record this migration
+INSERT INTO migrations (version) VALUES ('2.0');
 COMMIT;

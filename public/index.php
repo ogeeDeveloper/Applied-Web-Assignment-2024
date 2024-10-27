@@ -3,9 +3,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// error_reporting(E_ALL);
-// ini_set('display_errors', 1);
-
 // Define the application root directory
 define('APP_ROOT', dirname(__DIR__));
 
@@ -21,12 +18,18 @@ try {
 $dotenv = Dotenv\Dotenv::createImmutable(APP_ROOT);
 $dotenv->load();
 
-// use App\Config\Database;
-use App\config\Database; 
+// Import required classes
+use App\Config\Database;
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
+use App\Controllers\CustomerController;
+use App\Controllers\FarmerController;
+use App\Controllers\AdminController;
+use App\Controllers\ProductController;
+use App\Controllers\OrderController;
+use App\Controllers\HomeController;
+use App\Controllers\ErrorController;
 use App\Controllers\Api\AuthController as ApiAuthController;
-use App\Controllers\Api\ProductController;
 use App\Middleware\RoleMiddleware;
 use App\Models\Logger;
 
@@ -57,165 +60,154 @@ try {
         $database = new Database();
         $db = $database->getConnection();
     } catch (Exception $e) {
-        echo "Database connection error: " . $e->getMessage();
-        exit;
+        $logger->error("Database connection error: " . $e->getMessage());
+        throw $e;
     }
 
-    // Initialize controllers
-    $authController = new AuthController($db, $logger);
-    $apiAuthController = new ApiAuthController($db, $logger);
-    $dashboardController = new DashboardController($db, $logger);
-    $productController = new ProductController($db, $logger);
+    // Initialize middleware
     $roleMiddleware = new RoleMiddleware($logger);
 
-} catch (Exception $e) {
-    error_log($e->getMessage());
-    http_response_code(500);
-    
-    if (file_exists(APP_ROOT . '/src/Views/errors/500.php')) {
-        require APP_ROOT . '/src/Views/errors/500.php';
-    } else {
-        echo "Internal Server Error. Please try again later.";
+    // Define protected route groups
+    $protectedRoutes = [
+        'customer' => [
+            'GET /customer/dashboard' => ['CustomerController', 'index'],
+            'GET /customer/orders' => ['CustomerController', 'getOrderHistory'],
+            'POST /customer/profile/update' => ['CustomerController', 'updateCustomerProfile'],
+            'POST /customer/preferences' => ['CustomerController', 'updatePreferences'],
+            'POST /customer/products/save' => ['CustomerController', 'saveProduct'],
+            'POST /customer/products/remove' => ['CustomerController', 'removeSavedProduct'],
+            'GET /customer/orders/active' => ['CustomerController', 'getActiveOrders'],
+            'GET /customer/products/saved' => ['CustomerController', 'getSavedProducts'],
+            'GET /customer/stats' => ['CustomerController', 'getCustomerStats']
+        ],
+        'farmer' => [
+            'GET /farmer/dashboard' => ['FarmerController', 'index'],
+            'POST /farmer/profile/update' => ['FarmerController', 'updateProfile'],
+            'GET /farmer/products' => ['FarmerController', 'getProducts'],
+            'POST /farmer/products' => ['FarmerController', 'addProduct'],
+            'PUT /farmer/products/{id}' => ['FarmerController', 'updateProduct'],
+            'POST /farmer/plantings' => ['FarmerController', 'addPlanting'],
+            'POST /farmer/chemical-usage' => ['FarmerController', 'recordChemicalUsage'],
+            'POST /farmer/harvests' => ['FarmerController', 'recordHarvest'],
+            'GET /farmer/orders/pending' => ['FarmerController', 'getPendingOrders'],
+            'GET /farmer/stats' => ['FarmerController', 'getMonthlyStats']
+        ],
+        'admin' => [
+            'GET /admin/dashboard' => ['AdminController', 'index'],
+            'GET /admin/users' => ['AdminController', 'manageUsers'],
+            'GET /admin/farmers' => ['AdminController', 'manageFarmers'],
+            'POST /admin/farmers/approve' => ['AdminController', 'approveNewFarmer'],
+            'POST /admin/users/suspend' => ['AdminController', 'suspendUser'],
+            'GET /admin/system/health' => ['AdminController', 'systemHealth'],
+            'GET /admin/system/logs' => ['AdminController', 'getSystemLogs'],
+            'GET /admin/stats' => ['AdminController', 'getSystemMetrics']
+        ]
+    ];
+
+    // Define public routes
+    $publicRoutes = [
+        'GET /' => ['HomeController', 'index'],
+        'GET /login' => ['AuthController', 'loginForm'],
+        'POST /login' => ['AuthController', 'login'],
+        'GET /register' => ['AuthController', 'customerRegistrationForm'],
+        'POST /register' => ['AuthController', 'register'],
+        'GET /register/farmer' => ['AuthController', 'farmerRegistrationForm'],
+        'POST /register/farmer' => ['AuthController', 'register'],
+        'GET /logout' => ['AuthController', 'logout'],
+        'GET /products' => ['ProductController', 'listProducts'],
+        'GET /farmers' => ['HomeController', 'listFarmers'],
+        'GET /about' => ['HomeController', 'about'],
+        'GET /contact' => ['HomeController', 'contact'],
+        'GET /unauthorized' => ['ErrorController', 'unauthorized']
+    ];
+
+    // Define API routes
+    $apiRoutes = [
+        'POST /api/auth/login' => ['ApiAuthController', 'login'],
+        'POST /api/auth/register' => ['ApiAuthController', 'register'],
+        'GET /api/products' => ['Api\ProductController', 'index'],
+        'POST /api/products' => ['Api\ProductController', 'create'],
+        'GET /api/orders' => ['Api\OrderController', 'index'],
+        'POST /api/orders' => ['Api\OrderController', 'create'],
+        'PUT /api/orders/{id}/status' => ['Api\OrderController', 'updateStatus']
+    ];
+
+    // Get request method and URI
+    $request_method = $_SERVER['REQUEST_METHOD'];
+    $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    $route = $request_method . ' ' . $request_uri;
+
+    // Handle CORS for API routes
+    if (strpos($request_uri, '/api/') === 0) {
+        header('Access-Control-Allow-Origin: *');
+        header('Content-Type: application/json');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Requested-With, Authorization');
+        
+        if ($request_method === 'OPTIONS') {
+            http_response_code(204);
+            exit;
+        }
     }
-    exit;
-}
 
-// Get request method and URI
-$request_method = $_SERVER['REQUEST_METHOD'];
-$request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-$route = $request_method . ' ' . $request_uri;
+    // Route handling
+    $routeHandled = false;
 
-// CORS headers for API routes
-if (strpos($request_uri, '/api/') === 0) {
-    header('Access-Control-Allow-Origin: *');
-    header('Content-Type: application/json');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Origin, Content-Type, X-Requested-With, Authorization');
-    
-    // Handle preflight requests
-    if ($request_method === 'OPTIONS') {
-        http_response_code(204);
-        exit;
-    }
-}
-
-try {
-    // Main routing switch
-    switch ($route) {
-        // Public routes
-        case 'GET /':
-            case 'GET /index.php':
-                $controller = new \App\Controllers\HomeController($db, $logger);
-                $controller->index();
+    // Check protected routes first
+    foreach ($protectedRoutes as $role => $routes) {
+        if (isset($routes[$route])) {
+            try {
+                // Apply role middleware
+                $roleMiddleware->handle($role)();
+                
+                // Route is authorized, execute controller
+                $controllerName = "App\\Controllers\\" . $routes[$route][0];
+                $methodName = $routes[$route][1];
+                
+                $controller = new $controllerName($db, $logger);
+                $controller->$methodName();
+                $routeHandled = true;
                 break;
-
-        // Authentication routes
-        case 'GET /login':
-            case 'GET /login.php':
-                if ($authController->isAuthenticated()) {
-                    header('Location: ' . $authController->getRedirectUrl());
-                    exit;
+            } catch (Exception $e) {
+                if ($e->getCode() === 401) {
+                    header('Location: /login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+                } else {
+                    header('Location: /unauthorized');
                 }
-                $controller = new \App\Controllers\AuthController($db, $logger);
-                $controller->loginForm();
-                break;
-
-        case 'POST /api/auth/login':
-            header('Content-Type: application/json');
-            $authController = new \App\Controllers\Api\AuthController($db, $logger);
-            $authController->login();
-            exit();
-            break;
-        
-        // Customer registration
-        case 'GET /register':
-            $authController->customerRegistrationForm();
-            break;
-
-        // case 'POST /register':
-        //     $response = $authController->register(array_merge($_POST, ['role' => 'customer']));
-        //     if ($response['success']) {
-        //         $_SESSION['success'] = $response['message'];
-        //         header('Location: /login');
-        //     } else {
-        //         $_SESSION['error'] = $response['message'];
-        //         header('Location: /register');
-        //     }
-        //     exit;
-        //     break;
-
-        case 'POST /api/auth/customers/register':
-            header('Content-Type: application/json');
-            $authController = new \App\Controllers\AuthController($db, $logger);
-            $result = $authController->register(array_merge($_POST, ['role' => 'customer']));
-            echo json_encode($result);
-            exit();
-    
-        // Farmer registration
-        case 'GET /register/farmer':
-            $authController->farmerRegistrationForm();
-            break;
-
-        case 'POST /register/farmer':
-            $response = $authController->register(array_merge($_POST, ['role' => 'farmer']));
-            if ($response['success']) {
-                $_SESSION['success'] = $response['message'];
-                header('Location: /login');
-            } else {
-                $_SESSION['error'] = $response['message'];
-                header('Location: /register/farmer');
-            }
-            exit;
-            break;
-
-        case 'GET /logout':
-            $authController->logout();
-            header('Location: /login');
-            exit;
-            break;
-        
-         // Dashboard routes
-        case 'GET /customer/dashboard':
-            if ($authController->hasRole('customer')) {
-                $dashboardController->customerDashboard();
-            } else {
-                header('Location: /unauthorized');
                 exit;
             }
-            break;
-
-        case 'GET /farmer/dashboard':
-            if ($authController->hasRole('farmer')) {
-                $dashboardController->farmerDashboard();
-            } else {
-                header('Location: /unauthorized');
-                exit;
-            }
-            break;
-
-        case 'GET /admin/dashboard':
-            if ($authController->hasRole('admin')) {
-                $dashboardController->adminDashboard();
-            } else {
-                header('Location: /unauthorized');
-                exit;
-            }
-            break;
-
-        // Error Routes
-        case 'GET /unauthorized':
-            http_response_code(403);
-            $controller = new \App\Controllers\ErrorController($db, $logger);
-            $controller->unauthorized();
-            break;
-
-        default:
-            $logger->warning("404 Not Found: {$request_uri}");
-            http_response_code(404);
-            $controller = new \App\Controllers\ErrorController($db, $logger);
-            $controller->notFound();
-            break;
+        }
     }
+
+    // Check public routes if not handled
+    if (!$routeHandled && isset($publicRoutes[$route])) {
+        $controllerName = "App\\Controllers\\" . $publicRoutes[$route][0];
+        $methodName = $publicRoutes[$route][1];
+        
+        $controller = new $controllerName($db, $logger);
+        $controller->$methodName();
+        $routeHandled = true;
+    }
+
+    // Check API routes if not handled
+    if (!$routeHandled && isset($apiRoutes[$route])) {
+        $controllerName = "App\\Controllers\\" . $apiRoutes[$route][0];
+        $methodName = $apiRoutes[$route][1];
+        
+        header('Content-Type: application/json');
+        $controller = new $controllerName($db, $logger);
+        $controller->$methodName();
+        $routeHandled = true;
+    }
+
+    // If no route matched, show 404
+    if (!$routeHandled) {
+        $logger->warning("404 Not Found: {$request_uri}");
+        http_response_code(404);
+        $controller = new ErrorController($db, $logger);
+        $controller->notFound();
+    }
+
 } catch (Exception $e) {
     $logger->error("Application error: " . $e->getMessage(), [
         'file' => $e->getFile(),

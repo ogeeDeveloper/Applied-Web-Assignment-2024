@@ -83,4 +83,57 @@ class SystemHealth {
         $result = $this->db->query("SHOW STATUS WHERE Variable_name = 'Uptime'")->fetch();
         return (int)($result['Value'] ?? 0);
     }
+
+    public function checkServicesHealth(): array {
+        try {
+            $services = [
+                'database' => $this->checkDatabaseHealth(),
+                'mail' => $this->checkMailService(),
+                'storage' => $this->checkStorageHealth(),
+                'queue' => $this->checkQueueHealth()
+            ];
+
+            return [
+                'status' => !in_array(false, array_column($services, 'status')),
+                'services' => $services
+            ];
+        } catch (\Exception $e) {
+            $this->logger->error("Service health check error: " . $e->getMessage());
+            return [
+                'status' => false,
+                'message' => 'Service health check failed'
+            ];
+        }
+    }
+
+    public function getSystemLogs(string $logType, string $startDate, string $endDate, string $level = 'ERROR'): array {
+        try {
+            $sql = "SELECT * FROM system_logs 
+                    WHERE log_type = :log_type 
+                    AND level = :level
+                    AND created_at BETWEEN :start_date AND :end_date
+                    ORDER BY created_at DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'log_type' => $logType,
+                'level' => $level,
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error retrieving system logs: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function checkMailService(): array {
+        // Add your mail service check logic here
+        return [
+            'status' => true,
+            'message' => 'Mail service is operational'
+        ];
+    }
 }

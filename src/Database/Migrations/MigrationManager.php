@@ -18,7 +18,6 @@ class MigrationManager {
 
     private function initMigrationsTable(): void {
         try {
-            // First, select the database
             $this->db->exec("USE " . getenv('MYSQL_DATABASE'));
 
             $sql = "
@@ -36,7 +35,6 @@ class MigrationManager {
 
     public function migrate(): void {
         try {
-            // Get all migration files
             $files = glob($this->migrationsPath . '/V*__*.sql');
             sort($files); // Ensure migrations run in order
 
@@ -74,15 +72,16 @@ class MigrationManager {
             }
 
             $this->db->beginTransaction();
-            
-            // Split SQL by semicolon to execute multiple statements
+
             $statements = array_filter(
                 array_map('trim', explode(';', $sql)),
                 'strlen'
             );
 
             foreach ($statements as $statement) {
-                $this->db->exec($statement);
+                if (!empty($statement)) {
+                    $this->db->exec($statement);
+                }
             }
 
             $this->recordMigration($version);
@@ -98,30 +97,5 @@ class MigrationManager {
     private function recordMigration(string $version): void {
         $stmt = $this->db->prepare("INSERT INTO migrations (version) VALUES (?)");
         $stmt->execute([$version]);
-    }
-
-    public function getMigrationStatus(): array {
-        $status = [];
-        $files = glob($this->migrationsPath . '/V*__*.sql');
-        sort($files);
-
-        foreach ($files as $file) {
-            $version = $this->extractVersionFromFilename($file);
-            $executed = $this->hasMigrationBeenExecuted($version);
-            $status[] = [
-                'version' => $version,
-                'file' => basename($file),
-                'executed' => $executed,
-                'executed_at' => $executed ? $this->getMigrationExecutionDate($version) : null
-            ];
-        }
-
-        return $status;
-    }
-
-    private function getMigrationExecutionDate(string $version): ?string {
-        $stmt = $this->db->prepare("SELECT executed_at FROM migrations WHERE version = ?");
-        $stmt->execute([$version]);
-        return $stmt->fetchColumn();
     }
 }

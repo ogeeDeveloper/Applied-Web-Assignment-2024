@@ -8,8 +8,8 @@ if (!defined('APP_ROOT')) {
 ?>
 
 <section class="section register section--xl">
-    <div class="breedcrumb">
-        <div class="breedcrumb__img-wrapper">
+    <div class="breadcrumb">
+        <div class="breadcrumb__img-wrapper">
             <img src="/images/banner/farmer-register.jpg" alt="Become a Farmer">
 
             <div class="container">

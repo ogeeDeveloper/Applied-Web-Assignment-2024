@@ -6,41 +6,149 @@ use PDO;
 class Product {
     private PDO $db;
     private $logger;
+    private MediaManager $mediaManager;
 
     public function __construct(PDO $db, $logger) {
         $this->db = $db;
         $this->logger = $logger;
+        $this->mediaManager = new MediaManager($db, $logger);
     }
 
-    public function create(array $data): int {
+    /**
+     * Creates a new product in the database.
+     *
+     * @param array $data An associative array containing the product data.
+     * @param array|null $files An associative array containing file data (optional).
+     *
+     * @return array An associative array containing the result of the operation.
+     *               The array will have the following keys:
+     *               - 'success': A boolean indicating whether the operation was successful.
+     *               - 'product_id': The ID of the newly created product (if successful).
+     *               - 'message': A message describing the outcome of the operation.
+     *
+     * @throws \Exception If an error occurs during the file upload process.
+     */
+    public function create(array $data, array $files = null): array {
         try {
+            $this->db->beginTransaction();
+
             $sql = "INSERT INTO products (
-                farmer_trn, name, category, description, 
-                price_per_unit, stock_quantity, availability,
-                status, delivery_option
+                farmer_id, name, category, description, 
+                price_per_unit, unit_type, stock_quantity, availability,
+                organic_certified, is_gmo, status, delivery_options
             ) VALUES (
-                :farmer_trn, :name, :category, :description, 
-                :price_per_unit, :stock_quantity, :availability,
-                :status, :delivery_option
+                :farmer_id, :name, :category, :description, 
+                :price_per_unit, :unit_type, :stock_quantity, :availability,
+                :organic_certified, :is_gmo, :status, :delivery_options
             )";
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
-                'farmer_trn' => $data['farmer_id'],
+                'farmer_id' => $data['farmer_id'],
                 'name' => $data['name'],
                 'category' => $data['category'],
                 'description' => $data['description'] ?? null,
                 'price_per_unit' => $data['price'],
+                'unit_type' => $data['unit_type'] ?? 'kg',
                 'stock_quantity' => $data['stock_quantity'] ?? 0,
                 'availability' => $data['availability'] ?? true,
+                'organic_certified' => $data['organic_certified'] ?? false,
+                'is_gmo' => $data['is_gmo'] ?? false,
                 'status' => $data['status'] ?? 'available',
-                'delivery_option' => json_encode($data['delivery_options'] ?? ['pickup'])
+                'delivery_options' => json_encode($data['delivery_options'] ?? ['pickup'])
             ]);
 
-            return (int) $this->db->lastInsertId();
-        } catch (\PDOException $e) {
+            $productId = (int) $this->db->lastInsertId();
+
+            // Handle file uploads if any
+            if ($files && !empty($files['images'])) {
+                foreach ($files['images'] as $image) {
+                    $uploadResult = $this->mediaManager->uploadFile($image, 'product', $productId);
+                    if (!$uploadResult['success']) {
+                        throw new \Exception("Failed to upload product image: " . $uploadResult['message']);
+                    }
+                }
+            }
+
+            $this->db->commit();
+
+            return [
+                'success' => true,
+                'product_id' => $productId,
+                'message' => 'Product created successfully'
+            ];
+        } catch (\Exception $e) {
+            $this->db->rollBack();
             $this->logger->error("Error creating product: " . $e->getMessage());
-            throw new \Exception("Failed to create product");
+            return [
+                'success' => false,
+                'message' => "Failed to create product: " . $e->getMessage()
+            ];
+        }
+    }
+
+    public function getProductWithMedia(int $productId): ?array {
+        try {
+            // Get product details
+            $sql = "SELECT p.*, f.farm_name, f.name as farmer_name 
+                    FROM products p
+                    JOIN farmer_profiles f ON p.farmer_id = f.farmer_id
+                    WHERE p.product_id = :product_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['product_id' => $productId]);
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$product) {
+                return null;
+            }
+
+            // Get product images
+            $product['media'] = $this->mediaManager->getEntityFiles('product', $productId);
+            
+            return $product;
+        } catch (\Exception $e) {
+            $this->logger->error("Error getting product with media: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function updateProductMedia(int $productId, array $files): array {
+        try {
+            $uploadedFiles = [];
+            foreach ($files['images'] as $image) {
+                $uploadResult = $this->mediaManager->uploadFile($image, 'product', $productId);
+                if ($uploadResult['success']) {
+                    $uploadedFiles[] = $uploadResult;
+                }
+            }
+
+            return [
+                'success' => true,
+                'uploaded_files' => $uploadedFiles
+            ];
+        } catch (\Exception $e) {
+            $this->logger->error("Error updating product media: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    public function setPrimaryImage(int $productId, int $fileId): array {
+        try {
+            $result = $this->mediaManager->setPrimaryFile($fileId, 'product', $productId);
+            return [
+                'success' => $result,
+                'message' => $result ? 'Primary image updated successfully' : 'Failed to update primary image'
+            ];
+        } catch (\Exception $e) {
+            $this->logger->error("Error setting primary image: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
         }
     }
 
@@ -326,6 +434,87 @@ class Product {
         } catch (\PDOException $e) {
             $this->logger->error("Error checking saved product: " . $e->getMessage());
             return false;
+        }
+    }
+
+    public function getAllProducts(array $filters = [], int $limit = null, int $offset = null): array {
+        try {
+            $conditions = [];
+            $params = [];
+
+            $sql = "SELECT p.*, 
+                    f.farm_name,
+                    f.name as farmer_name,
+                    COUNT(DISTINCT oi.order_id) as total_orders,
+                    COALESCE(SUM(oi.quantity), 0) as total_units_sold
+                    FROM products p
+                    JOIN farmer_profiles f ON p.farmer_id = f.farmer_id
+                    LEFT JOIN order_items oi ON p.product_id = oi.product_id";
+
+            // Apply filters
+            if (!empty($filters['category'])) {
+                $conditions[] = "p.category = :category";
+                $params['category'] = $filters['category'];
+            }
+
+            if (!empty($filters['status'])) {
+                $conditions[] = "p.status = :status";
+                $params['status'] = $filters['status'];
+            }
+
+            if (!empty($filters['farmer_id'])) {
+                $conditions[] = "p.farmer_id = :farmer_id";
+                $params['farmer_id'] = $filters['farmer_id'];
+            }
+
+            if (isset($filters['organic_certified'])) {
+                $conditions[] = "p.organic_certified = :organic_certified";
+                $params['organic_certified'] = $filters['organic_certified'];
+            }
+
+            if (isset($filters['is_gmo'])) {
+                $conditions[] = "p.is_gmo = :is_gmo";
+                $params['is_gmo'] = $filters['is_gmo'];
+            }
+
+            if (!empty($conditions)) {
+                $sql .= " WHERE " . implode(" AND ", $conditions);
+            }
+
+            $sql .= " GROUP BY p.product_id ORDER BY p.created_at DESC";
+
+            if ($limit !== null) {
+                $sql .= " LIMIT :limit";
+                if ($offset !== null) {
+                    $sql .= " OFFSET :offset";
+                }
+            }
+
+            $stmt = $this->db->prepare($sql);
+            
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+
+            if ($limit !== null) {
+                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+                if ($offset !== null) {
+                    $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+                }
+            }
+
+            $stmt->execute();
+            $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Get media for each product
+            foreach ($products as &$product) {
+                $product['media'] = $this->mediaManager->getEntityFiles('product', $product['product_id']);
+            }
+
+            return $products;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting all products: " . $e->getMessage());
+            return [];
         }
     }
 }
