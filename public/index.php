@@ -1,5 +1,15 @@
 <?php
+// Start session at the very beginning with secure settings
 if (session_status() === PHP_SESSION_NONE) {
+    // Set secure session parameters
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_samesite', 'Lax');
+
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+        ini_set('session.cookie_secure', 1);
+    }
+
     session_start();
 }
 
@@ -25,6 +35,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\CustomerController;
 use App\Controllers\FarmerController;
 use App\Controllers\AdminController;
+use App\Controllers\AdminAuthController;
 use App\Controllers\ProductController;
 use App\Controllers\OrderController;
 use App\Controllers\HomeController;
@@ -67,40 +78,42 @@ try {
     // Initialize middleware
     $roleMiddleware = new RoleMiddleware($logger);
 
-    // Define protected route groups
+    // Define public admin routes that don't require authentication
+    $publicAdminRoutes = [
+        'GET /admin/login' => ['AdminAuthController', 'showLoginForm'],
+        'POST /admin/login' => ['AdminAuthController', 'login'],
+        'GET /admin/forgot-password' => ['AdminAuthController', 'showForgotPasswordForm'],
+        'POST /admin/forgot-password' => ['AdminAuthController', 'forgotPassword']
+    ];
+
+    // Define protected admin routes
+    $protectedAdminRoutes = [
+        'GET /admin' => ['AdminController', 'dashboard'],
+        'GET /admin/dashboard' => ['AdminController', 'dashboard'],
+        'POST /admin/logout' => ['AdminAuthController', 'logout'],
+        'GET /admin/farmers' => ['AdminController', 'manageFarmers'],
+        'GET /admin/farmers/{id}' => ['AdminController', 'viewFarmer'],
+        'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
+        'POST /admin/farmers/reject' => ['AdminController', 'rejectFarmer'],
+        'POST /admin/farmers/suspend' => ['AdminController', 'suspendFarmer'],
+        'GET /admin/products' => ['AdminController', 'manageProducts'],
+        'POST /admin/products/approve' => ['AdminController', 'approveProduct'],
+        'POST /admin/products/reject' => ['AdminController', 'rejectProduct'],
+        'GET /admin/orders' => ['AdminController', 'manageOrders'],
+        'GET /admin/orders/{id}' => ['AdminController', 'viewOrder'],
+        'POST /admin/orders/update-status' => ['AdminController', 'updateOrderStatus'],
+        'GET /admin/system/health' => ['AdminController', 'systemHealth'],
+        'GET /admin/system/logs' => ['AdminController', 'systemLogs'],
+        'GET /admin/system/metrics' => ['AdminController', 'systemMetrics']
+    ];
+
+    // Define protected route groups for other roles
     $protectedRoutes = [
         'customer' => [
-            'GET /customer/dashboard' => ['CustomerController', 'index'],
-            'GET /customer/orders' => ['CustomerController', 'getOrderHistory'],
-            'POST /customer/profile/update' => ['CustomerController', 'updateCustomerProfile'],
-            'POST /customer/preferences' => ['CustomerController', 'updatePreferences'],
-            'POST /customer/products/save' => ['CustomerController', 'saveProduct'],
-            'POST /customer/products/remove' => ['CustomerController', 'removeSavedProduct'],
-            'GET /customer/orders/active' => ['CustomerController', 'getActiveOrders'],
-            'GET /customer/products/saved' => ['CustomerController', 'getSavedProducts'],
-            'GET /customer/stats' => ['CustomerController', 'getCustomerStats']
+            // ... your existing customer routes
         ],
         'farmer' => [
-            'GET /farmer/dashboard' => ['FarmerController', 'index'],
-            'POST /farmer/profile/update' => ['FarmerController', 'updateProfile'],
-            'GET /farmer/products' => ['FarmerController', 'getProducts'],
-            'POST /farmer/products' => ['FarmerController', 'addProduct'],
-            'PUT /farmer/products/{id}' => ['FarmerController', 'updateProduct'],
-            'POST /farmer/plantings' => ['FarmerController', 'addPlanting'],
-            'POST /farmer/chemical-usage' => ['FarmerController', 'recordChemicalUsage'],
-            'POST /farmer/harvests' => ['FarmerController', 'recordHarvest'],
-            'GET /farmer/orders/pending' => ['FarmerController', 'getPendingOrders'],
-            'GET /farmer/stats' => ['FarmerController', 'getMonthlyStats']
-        ],
-        'admin' => [
-            'GET /admin/dashboard' => ['AdminController', 'index'],
-            'GET /admin/users' => ['AdminController', 'manageUsers'],
-            'GET /admin/farmers' => ['AdminController', 'manageFarmers'],
-            'POST /admin/farmers/approve' => ['AdminController', 'approveNewFarmer'],
-            'POST /admin/users/suspend' => ['AdminController', 'suspendUser'],
-            'GET /admin/system/health' => ['AdminController', 'systemHealth'],
-            'GET /admin/system/logs' => ['AdminController', 'getSystemLogs'],
-            'GET /admin/stats' => ['AdminController', 'getSystemMetrics']
+            // ... your existing farmer routes
         ]
     ];
 
@@ -121,60 +134,66 @@ try {
         'GET /unauthorized' => ['ErrorController', 'unauthorized']
     ];
 
-    // Define API routes
-    $apiRoutes = [
-        'POST /api/auth/login' => ['ApiAuthController', 'login'],
-        'POST /api/auth/register' => ['ApiAuthController', 'register'],
-        'GET /api/products' => ['Api\ProductController', 'index'],
-        'POST /api/products' => ['Api\ProductController', 'create'],
-        'GET /api/orders' => ['Api\OrderController', 'index'],
-        'POST /api/orders' => ['Api\OrderController', 'create'],
-        'PUT /api/orders/{id}/status' => ['Api\OrderController', 'updateStatus']
-    ];
-
     // Get request method and URI
     $request_method = $_SERVER['REQUEST_METHOD'];
     $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $route = $request_method . ' ' . $request_uri;
 
-    // Handle CORS for API routes
-    if (strpos($request_uri, '/api/') === 0) {
-        header('Access-Control-Allow-Origin: *');
-        header('Content-Type: application/json');
-        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-        header('Access-Control-Allow-Headers: Origin, Content-Type, X-Requested-With, Authorization');
-        
-        if ($request_method === 'OPTIONS') {
-            http_response_code(204);
-            exit;
-        }
-    }
-
     // Route handling
     $routeHandled = false;
 
-    // Check protected routes first
-    foreach ($protectedRoutes as $role => $routes) {
-        if (isset($routes[$route])) {
-            try {
-                // Apply role middleware
-                $roleMiddleware->handle($role)();
-                
-                // Route is authorized, execute controller
-                $controllerName = "App\\Controllers\\" . $routes[$route][0];
-                $methodName = $routes[$route][1];
-                
+    // Check if it's a public admin route
+    if (isset($publicAdminRoutes[$route])) {
+        $controllerName = "App\\Controllers\\" . $publicAdminRoutes[$route][0];
+        $methodName = $publicAdminRoutes[$route][1];
+
+        $controller = new $controllerName($db, $logger);
+        $controller->$methodName();
+        $routeHandled = true;
+    }
+    // Check if it's a protected admin route
+    elseif (isset($protectedAdminRoutes[$route])) {
+        try {
+            // Apply admin role middleware
+            if ($roleMiddleware->handle('admin')()) {
+                $controllerName = "App\\Controllers\\" . $protectedAdminRoutes[$route][0];
+                $methodName = $protectedAdminRoutes[$route][1];
+
                 $controller = new $controllerName($db, $logger);
                 $controller->$methodName();
                 $routeHandled = true;
-                break;
-            } catch (Exception $e) {
-                if ($e->getCode() === 401) {
-                    header('Location: /login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
-                } else {
-                    header('Location: /unauthorized');
+            }
+        } catch (Exception $e) {
+            if (!headers_sent()) {
+                header('Location: /admin/login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+                exit();
+            }
+            echo '<script>window.location.href="/admin/login?redirect=' . urlencode($_SERVER['REQUEST_URI']) . '";</script>';
+            exit();
+        }
+    }
+    // Check other protected routes
+    elseif (!$routeHandled) {
+        foreach ($protectedRoutes as $role => $routes) {
+            if (isset($routes[$route])) {
+                try {
+                    if ($roleMiddleware->handle($role)()) {
+                        $controllerName = "App\\Controllers\\" . $routes[$route][0];
+                        $methodName = $routes[$route][1];
+
+                        $controller = new $controllerName($db, $logger);
+                        $controller->$methodName();
+                        $routeHandled = true;
+                        break;
+                    }
+                } catch (Exception $e) {
+                    if (!headers_sent()) {
+                        header('Location: /login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+                        exit();
+                    }
+                    echo '<script>window.location.href="/login?redirect=' . urlencode($_SERVER['REQUEST_URI']) . '";</script>';
+                    exit();
                 }
-                exit;
             }
         }
     }
@@ -183,18 +202,7 @@ try {
     if (!$routeHandled && isset($publicRoutes[$route])) {
         $controllerName = "App\\Controllers\\" . $publicRoutes[$route][0];
         $methodName = $publicRoutes[$route][1];
-        
-        $controller = new $controllerName($db, $logger);
-        $controller->$methodName();
-        $routeHandled = true;
-    }
 
-    // Check API routes if not handled
-    if (!$routeHandled && isset($apiRoutes[$route])) {
-        $controllerName = "App\\Controllers\\" . $apiRoutes[$route][0];
-        $methodName = $apiRoutes[$route][1];
-        
-        header('Content-Type: application/json');
         $controller = new $controllerName($db, $logger);
         $controller->$methodName();
         $routeHandled = true;
@@ -203,27 +211,23 @@ try {
     // If no route matched, show 404
     if (!$routeHandled) {
         $logger->warning("404 Not Found: {$request_uri}");
-        http_response_code(404);
+        if (!headers_sent()) {
+            http_response_code(404);
+        }
         $controller = new ErrorController($db, $logger);
         $controller->notFound();
     }
-
 } catch (Exception $e) {
     $logger->error("Application error: " . $e->getMessage(), [
         'file' => $e->getFile(),
         'line' => $e->getLine(),
         'trace' => $e->getTraceAsString()
     ]);
-    
-    http_response_code(500);
-    if (strpos($request_uri, '/api/') === 0) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Internal server error'
-        ]);
-    } else {
-        require APP_ROOT . '/src/Views/errors/500.php';
+
+    if (!headers_sent()) {
+        http_response_code(500);
     }
+    require APP_ROOT . '/src/Views/errors/500.php';
 }
 
 // Clean up any unused session messages

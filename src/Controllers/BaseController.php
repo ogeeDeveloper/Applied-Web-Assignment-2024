@@ -1,44 +1,66 @@
 <?php
+
 namespace App\Controllers;
 
 use Exception;
 
-class BaseController {
+class BaseController
+{
     protected $db;
     protected $logger;
 
-    public function __construct($db = null, $logger = null) {
+    public function __construct($db = null, $logger = null)
+    {
         $this->db = $db;
         $this->logger = $logger;
     }
 
-    protected function render($view, $data = [], $pageTitle = null) {
+    protected function render($view, $data = [], $pageTitle = null, $layout = 'layouts/main')
+    {
         // Extract data to make it available in view
         if (!empty($data)) {
             extract($data);
         }
-        
+
         // Start output buffering
         ob_start();
-        
+
         // Include the view file
-        require_once APP_ROOT . "/src/Views/{$view}.php";
-        
+        $viewPath = APP_ROOT . "/src/Views/{$view}.php";
+        if (!file_exists($viewPath)) {
+            throw new Exception("View file not found: {$viewPath}");
+        }
+        require_once $viewPath;
+
         // Get the buffered content
         $content = ob_get_clean();
-        
+
         // Set page title
         $pageTitle = $pageTitle ?? 'AgriKonnect';
-        
+
         // Include the layout with the content
-        require_once APP_ROOT . '/src/Views/layouts/main.php';
+        $layoutPath = APP_ROOT . "/src/Views/{$layout}.php";
+        if (!file_exists($layoutPath)) {
+            throw new Exception("Layout file not found: {$layoutPath}");
+        }
+        require_once $layoutPath;
+    }
+
+
+    protected function requireAdmin()
+    {
+        if (!isset($_SESSION['admin_id'])) {
+            $this->logger->warning('Unauthorized access attempt to admin area');
+            $this->redirect('/admin/login', 'Please login to access the admin area', 'error');
+        }
     }
 
     /**
      * Validate that the request is from an authenticated user
      * @throws Exception if user is not authenticated
      */
-    protected function validateAuthenticatedRequest(): void {
+    protected function validateAuthenticatedRequest(): void
+    {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -54,7 +76,8 @@ class BaseController {
      * @param string $requiredRole Required role for access
      * @throws Exception if role validation fails
      */
-    protected function validateRole(string $requiredRole): void {
+    protected function validateRole(string $requiredRole): void
+    {
         if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $requiredRole) {
             $this->logger->warning("Unauthorized role access attempt: {$_SESSION['user_role']} trying to access {$requiredRole} area");
             throw new Exception('Unauthorized role access', 403);
@@ -66,7 +89,8 @@ class BaseController {
      * @param array $allowedRoles Array of allowed roles
      * @throws Exception if role validation fails
      */
-    protected function validateRoles(array $allowedRoles): void {
+    protected function validateRoles(array $allowedRoles): void
+    {
         if (!isset($_SESSION['user_role']) || !in_array($_SESSION['user_role'], $allowedRoles)) {
             $this->logger->warning("Unauthorized roles access attempt: {$_SESSION['user_role']}");
             throw new Exception('Unauthorized role access', 403);
@@ -78,7 +102,8 @@ class BaseController {
      * @param string $role Role to check
      * @return bool
      */
-    protected function hasRole(string $role): bool {
+    protected function hasRole(string $role): bool
+    {
         return isset($_SESSION['user_role']) && $_SESSION['user_role'] === $role;
     }
 
@@ -88,7 +113,8 @@ class BaseController {
      * @param int $statusCode HTTP status code
      * @return void
      */
-    protected function jsonResponse(array $data, int $statusCode = 200): void {
+    protected function jsonResponse(array $data, int $statusCode = 200): void
+    {
         http_response_code($statusCode);
         header('Content-Type: application/json');
         echo json_encode($data);
@@ -103,7 +129,8 @@ class BaseController {
      * @return array Upload result
      * @throws Exception on upload error
      */
-    protected function handleFileUpload(array $file, array $allowedTypes, string $uploadDir): array {
+    protected function handleFileUpload(array $file, array $allowedTypes, string $uploadDir): array
+    {
         if ($file['error'] !== UPLOAD_ERR_OK) {
             throw new Exception("Upload error: " . $file['error']);
         }
@@ -136,7 +163,8 @@ class BaseController {
      * @param string|null $input
      * @return string|null
      */
-    protected function sanitizeString(?string $input): ?string {
+    protected function sanitizeString(?string $input): ?string
+    {
         if ($input === null) {
             return null;
         }
@@ -149,7 +177,8 @@ class BaseController {
      * @return array Sanitized data
      * @throws Exception on validation failure
      */
-    protected function validateInput(array $rules): array {
+    protected function validateInput(array $rules): array
+    {
         $sanitizedData = [];
         foreach ($rules as $field => $rule) {
             switch ($rule) {
@@ -160,7 +189,7 @@ class BaseController {
                     }
                     $sanitizedData[$field] = $value;
                     break;
-                
+
                 case 'float':
                     $value = filter_input(INPUT_POST, $field, FILTER_VALIDATE_FLOAT);
                     if ($value === false || $value === null) {
@@ -173,7 +202,7 @@ class BaseController {
                     $value = filter_input(INPUT_POST, $field, FILTER_UNSAFE_RAW);
                     $sanitizedData[$field] = $this->sanitizeString($value);
                     break;
-                
+
                 case 'email':
                     $value = filter_input(INPUT_POST, $field, FILTER_VALIDATE_EMAIL);
                     if ($value === false || $value === null) {
@@ -215,7 +244,8 @@ class BaseController {
      * @param int $limit Items per page
      * @return array Pagination data
      */
-    protected function getPaginationData(int $total, int $page = 1, int $limit = 10): array {
+    protected function getPaginationData(int $total, int $page = 1, int $limit = 10): array
+    {
         $totalPages = ceil($total / $limit);
         $page = max(1, min($page, $totalPages));
         $offset = ($page - 1) * $limit;
@@ -239,7 +269,8 @@ class BaseController {
      * @param array $extraData Optional additional data to store
      * @return void
      */
-    protected function setFlashMessage(string $message, string $type = 'success', array $extraData = []): void {
+    protected function setFlashMessage(string $message, string $type = 'success', array $extraData = []): void
+    {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -257,7 +288,8 @@ class BaseController {
      *
      * @return array|null The flash message data or null if none exists
      */
-    protected function getFlashMessages(): ?array {
+    protected function getFlashMessages(): ?array
+    {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -276,7 +308,8 @@ class BaseController {
      * @param array $extraData Optional additional data to store
      * @return void
      */
-    protected function redirect(string $url, ?string $message = null, string $type = 'success', array $extraData = []): void {
+    protected function redirect(string $url, ?string $message = null, string $type = 'success', array $extraData = []): void
+    {
         if ($message) {
             $this->setFlashMessage($message, $type, $extraData);
         }
@@ -300,9 +333,9 @@ class BaseController {
      * @return void
      */
     protected function redirectBack(
-        ?string $message = null, 
-        string $type = 'success', 
-        array $extraData = [], 
+        ?string $message = null,
+        string $type = 'success',
+        array $extraData = [],
         string $defaultUrl = '/'
     ): void {
         $previousUrl = $_SERVER['HTTP_REFERER'] ?? $defaultUrl;
@@ -319,9 +352,9 @@ class BaseController {
      * @return void
      */
     protected function redirectWithInput(
-        string $url, 
-        array $input, 
-        ?string $message = null, 
+        string $url,
+        array $input,
+        ?string $message = null,
         string $type = 'error'
     ): void {
         if (session_status() === PHP_SESSION_NONE) {
@@ -339,7 +372,8 @@ class BaseController {
      * @param mixed $default Default value if key doesn't exist
      * @return mixed Old input data or default value
      */
-    protected function old(?string $key = null, $default = null) {
+    protected function old(?string $key = null, $default = null)
+    {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
