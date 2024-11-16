@@ -1,4 +1,7 @@
 <?php
+
+namespace App\Utils\Admin;
+
 class AdminHelper
 {
     public static function isAdminLoggedIn(): bool

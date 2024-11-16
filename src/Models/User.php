@@ -1,18 +1,22 @@
 <?php
+
 namespace App\Models;
 
 use PDO;
 
-class User {
+class User
+{
     private PDO $db;
     private $logger;
 
-    public function __construct(PDO $db, $logger) {
+    public function __construct(PDO $db, $logger)
+    {
         $this->db = $db;
         $this->logger = $logger;
     }
 
-    public function create(array $data): int {
+    public function create(array $data): int
+    {
         $sql = "INSERT INTO users (name, email, password, role) VALUES (:name, :email, :password, :role)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -25,21 +29,24 @@ class User {
         return (int) $this->db->lastInsertId();
     }
 
-    public function findByEmail(string $email): ?array {
+    public function findByEmail(string $email): ?array
+    {
         $stmt = $this->db->prepare("SELECT * FROM users WHERE email = :email");
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         return $user ?: null;
     }
 
-    public function findById(int $id): ?array {
+    public function findById(int $id): ?array
+    {
         $stmt = $this->db->prepare("SELECT * FROM users WHERE id = :id");
         $stmt->execute(['id' => $id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         return $user ?: null;
     }
 
-    public function getTotalCount(): int {
+    public function getTotalCount(): int
+    {
         try {
             $sql = "SELECT 
                     (SELECT COUNT(*) FROM customers) +
@@ -53,7 +60,8 @@ class User {
         }
     }
 
-    public function getNewUsersCount(int $days = 30): int {
+    public function getNewUsersCount(int $days = 30): int
+    {
         try {
             $sql = "SELECT 
                     (SELECT COUNT(*) FROM customers WHERE created_at >= DATE_SUB(CURRENT_DATE, INTERVAL :days DAY)) +
@@ -69,7 +77,8 @@ class User {
         }
     }
 
-    public function getActiveUsersCount(int $days = 30): int {
+    public function getActiveUsersCount(int $days = 30): int
+    {
         try {
             $sql = "SELECT COUNT(DISTINCT user_id) 
                     FROM activities 
@@ -84,7 +93,8 @@ class User {
         }
     }
 
-    public function getFarmerStats(): array {
+    public function getFarmerStats(): array
+    {
         try {
             return [
                 'total' => $this->getTotalFarmers(),
@@ -103,7 +113,8 @@ class User {
         }
     }
 
-    private function getActiveFarmers(): int {
+    private function getActiveFarmers(): int
+    {
         $sql = "SELECT COUNT(*) 
                 FROM farmers 
                 WHERE farmer_trn IN (
@@ -115,7 +126,8 @@ class User {
         return (int)$stmt->fetchColumn();
     }
 
-    private function getRecentlyJoinedFarmers(int $limit = 5): array {
+    private function getRecentlyJoinedFarmers(int $limit = 5): array
+    {
         $sql = "SELECT * 
                 FROM farmers 
                 ORDER BY created_at DESC 
@@ -127,7 +139,8 @@ class User {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function updateFarmerStatus(int $farmerId, string $status, int $adminId): bool {
+    public function updateFarmerStatus(int $farmerId, string $status, int $adminId): bool
+    {
         try {
             $this->db->beginTransaction();
 
@@ -155,7 +168,8 @@ class User {
         }
     }
 
-    public function updateUserStatus(int $userId, string $status, string $reason, int $adminId): bool {
+    public function updateUserStatus(int $userId, string $status, string $reason, int $adminId): bool
+    {
         try {
             $this->db->beginTransaction();
 
@@ -182,7 +196,8 @@ class User {
         }
     }
 
-    public function getTotalFarmers(): int {
+    public function getTotalFarmers(): int
+    {
         try {
             $sql = "SELECT COUNT(*) FROM farmer_profiles";
             $stmt = $this->db->query($sql);
@@ -193,7 +208,8 @@ class User {
         }
     }
 
-    public function getPendingFarmersCount(): int {
+    public function getPendingFarmersCount(): int
+    {
         try {
             $sql = "SELECT COUNT(*) 
                     FROM farmer_profiles 
@@ -206,7 +222,8 @@ class User {
         }
     }
 
-    public function getTopPerformingFarmers(int $limit = 5): array {
+    public function getTopPerformingFarmers(int $limit = 5): array
+    {
         try {
             $sql = "SELECT 
                         f.*,
@@ -234,7 +251,8 @@ class User {
         }
     }
 
-    public function getUserAuditLog(int $userId, string $startDate, string $endDate): array {
+    public function getUserAuditLog(int $userId, string $startDate, string $endDate): array
+    {
         try {
             $sql = "SELECT 
                         al.*,
@@ -260,7 +278,8 @@ class User {
         }
     }
 
-    private function logStatusChange(string $entityType, int $entityId, string $status, int $adminId, string $reason = null): void {
+    private function logStatusChange(string $entityType, int $entityId, string $status, int $adminId, string $reason = null): void
+    {
         $sql = "INSERT INTO status_change_logs (
                     entity_type, entity_id, status, changed_by, reason, created_at
                 ) VALUES (
@@ -277,7 +296,8 @@ class User {
         ]);
     }
 
-    public function getAllCustomers(int $limit = null, int $offset = null): array {
+    public function getAllCustomers(int $limit = null, int $offset = null): array
+    {
         try {
             $sql = "SELECT u.*, cp.*
                     FROM users u
@@ -293,7 +313,7 @@ class User {
             }
 
             $stmt = $this->db->prepare($sql);
-            
+
             if ($limit !== null) {
                 $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
                 if ($offset !== null) {
@@ -309,7 +329,8 @@ class User {
         }
     }
 
-    public function getAllFarmers(int $limit = null, int $offset = null): array {
+    public function getAllFarmers(int $limit = null, int $offset = null): array
+    {
         try {
             $sql = "SELECT u.*, fp.*, 
                     COUNT(DISTINCT p.product_id) as total_products,
@@ -331,7 +352,7 @@ class User {
             }
 
             $stmt = $this->db->prepare($sql);
-            
+
             if ($limit !== null) {
                 $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
                 if ($offset !== null) {
@@ -347,7 +368,8 @@ class User {
         }
     }
 
-    public function getUserStats(): array {
+    public function getUserStats(): array
+    {
         try {
             $stats = [
                 'total_users' => 0,
@@ -378,7 +400,7 @@ class User {
                     FROM users";
             $stmt = $this->db->query($sql);
             $newUsers = $stmt->fetch(\PDO::FETCH_ASSOC);
-            
+
             $stats['new_users_today'] = $newUsers['new_today'];
             $stats['new_users_this_week'] = $newUsers['new_this_week'];
             $stats['new_users_this_month'] = $newUsers['new_this_month'];
@@ -387,6 +409,110 @@ class User {
         } catch (\PDOException $e) {
             $this->logger->error("Error getting user stats: " . $e->getMessage());
             return [];
+        }
+    }
+
+    /**
+     * Updates the last login timestamp for a user
+     * 
+     * @param int $userId The ID of the user
+     * @return bool True if update was successful, false otherwise
+     */
+    public function updateLastLogin(int $userId): bool
+    {
+        try {
+            $sql = "UPDATE users SET 
+                    last_login = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :user_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['user_id' => $userId]);
+
+            $this->logger->info("Updated last login for user ID: {$userId}");
+            return true;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error updating last login: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Stores a password reset token for a user
+     * 
+     * @param int $userId The ID of the user
+     * @param string $token The reset token
+     * @return bool True if successful, false otherwise
+     */
+    public function storePasswordResetToken(int $userId, string $token): bool
+    {
+        try {
+            $sql = "UPDATE users SET 
+                    password_reset_token = :token,
+                    token_expiry = DATE_ADD(NOW(), INTERVAL 24 HOUR),
+                    updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :user_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'token' => $token,
+                'user_id' => $userId
+            ]);
+
+            $this->logger->info("Stored password reset token for user ID: {$userId}");
+            return true;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error storing password reset token: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Validates a password reset token
+     * 
+     * @param string $token The reset token to validate
+     * @return int|null The user ID if valid, null otherwise
+     */
+    public function validatePasswordResetToken(string $token): ?int
+    {
+        try {
+            $sql = "SELECT id FROM users 
+                    WHERE password_reset_token = :token 
+                    AND token_expiry > NOW()";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['token' => $token]);
+
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result ? (int)$result['id'] : null;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error validating reset token: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Clears the password reset token for a user
+     * 
+     * @param int $userId The ID of the user
+     * @return bool True if successful, false otherwise
+     */
+    public function clearPasswordResetToken(int $userId): bool
+    {
+        try {
+            $sql = "UPDATE users SET 
+                    password_reset_token = NULL,
+                    token_expiry = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :user_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['user_id' => $userId]);
+
+            return true;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error clearing reset token: " . $e->getMessage());
+            return false;
         }
     }
 }

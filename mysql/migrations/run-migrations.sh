@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Config\Database;
+use App\Database\DatabaseInitializer;
 use App\Database\Migrations\MigrationManager;
 
 // Wait until MySQL is ready
@@ -17,7 +18,7 @@ while ($attempt < $maxAttempts) {
         $connected = true;
         break;
     } catch (Exception $e) {
-        echo "Waiting for MySQL to be ready...\n";
+        echo "Waiting for MySQL to be ready... Attempt " . ($attempt + 1) . "/" . $maxAttempts . "\n";
         sleep(5);
         $attempt++;
     }
@@ -29,10 +30,14 @@ if (!$connected) {
 }
 
 try {
+    // Initialize the database first
+    $dbInitializer = new DatabaseInitializer($db, getenv('MYSQL_DATABASE'));
+    $dbInitializer->initialize();
+
     // Initialize migration manager
     $migrationsPath = __DIR__ . '/../mysql/migrations';
     $migrationManager = new MigrationManager($db, $migrationsPath);
-
+    
     // Run migrations
     echo "Starting migrations...\n";
     $migrationManager->migrate();

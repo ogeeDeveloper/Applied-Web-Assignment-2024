@@ -13,7 +13,7 @@
             "App\\": "src/"
         },
         "files": [
-            "src/utils/helpers.php"
+            "src/utils/functions.php"
         ]
     },
     "config": {

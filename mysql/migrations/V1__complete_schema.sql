@@ -3,29 +3,30 @@ START TRANSACTION;
 -- Disable foreign key checks during setup
 SET FOREIGN_KEY_CHECKS = 0;
 
--- Drop existing tables in reverse order of dependencies
-DROP TABLE IF EXISTS chemical_usage;
-DROP TABLE IF EXISTS harvests;
-DROP TABLE IF EXISTS plantings;
-DROP TABLE IF EXISTS crop_types;
-DROP TABLE IF EXISTS order_items;
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS user_roles;
-DROP TABLE IF EXISTS role_permissions;
-DROP TABLE IF EXISTS permissions;
-DROP TABLE IF EXISTS roles;
-DROP TABLE IF EXISTS farmer_profiles;
-DROP TABLE IF EXISTS customer_profiles;
-DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS migrations;
+-- -- Drop existing tables in reverse order of dependencies
+-- DROP TABLE IF EXISTS chemical_usage;
+-- DROP TABLE IF EXISTS harvests;
+-- DROP TABLE IF EXISTS plantings;
+-- DROP TABLE IF EXISTS crop_types;
+-- DROP TABLE IF EXISTS order_items;
+-- DROP TABLE IF EXISTS orders;
+-- DROP TABLE IF EXISTS products;
+-- DROP TABLE IF EXISTS user_roles;
+-- DROP TABLE IF EXISTS role_permissions;
+-- DROP TABLE IF EXISTS permissions;
+-- DROP TABLE IF EXISTS roles;
+-- DROP TABLE IF EXISTS farmer_profiles;
+-- DROP TABLE IF EXISTS customer_profiles;
+-- DROP TABLE IF EXISTS users;
+-- DROP TABLE IF EXISTS migrations;
 
--- Create migrations table
-CREATE TABLE migrations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    version VARCHAR(255) NOT NULL UNIQUE,
-    executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- -- Create migrations table
+-- CREATE TABLE migrations (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     version VARCHAR(255) NOT NULL UNIQUE,
+--     name VARCHAR(255) NOT NULL COMMENT 'Migration file name',
+--     executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Create users table (base table with no dependencies)
 CREATE TABLE users (
@@ -245,6 +246,6 @@ CREATE TABLE order_items (
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Record this migration
-INSERT INTO migrations (version) VALUES ('1.0');
+-- INSERT INTO migrations (version, name) VALUES ('1.0', 'V1__complete_schema.sql');
 
 COMMIT;

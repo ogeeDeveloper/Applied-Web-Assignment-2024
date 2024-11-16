@@ -1,5 +1,6 @@
+START TRANSACTION;
 -- Create system_logs table for application-level logging
-CREATE TABLE system_logs (
+CREATE TABLE IF NOT EXISTS system_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     log_type ENUM('error', 'warning', 'info', 'debug') NOT NULL,
     level VARCHAR(20) NOT NULL,
@@ -17,7 +18,7 @@ CREATE TABLE system_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Create audit_logs table for user action tracking
-CREATE TABLE audit_logs (
+CREATE TABLE IF NOT EXISTS audit_logs (
     audit_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL COMMENT 'User who performed the action',
     action_type VARCHAR(50) NOT NULL COMMENT 'Type of action performed',
@@ -37,7 +38,7 @@ CREATE TABLE audit_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Create status_change_logs table for tracking status changes
-CREATE TABLE status_change_logs (
+CREATE TABLE IF NOT EXISTS status_change_logs (
     change_id INT AUTO_INCREMENT PRIMARY KEY,
     entity_type ENUM('user', 'farmer', 'order', 'product') NOT NULL,
     entity_id INT NOT NULL,
@@ -53,32 +54,6 @@ CREATE TABLE status_change_logs (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Create stored procedure for cleaning old logs
-CREATE PROCEDURE cleanup_old_logs(IN retention_days INT)
-BEGIN
-    DECLARE cleanup_date TIMESTAMP;
-    SET cleanup_date = DATE_SUB(NOW(), INTERVAL retention_days DAY);
-    
-    -- Delete old system logs
-    DELETE FROM system_logs 
-    WHERE created_at < cleanup_date 
-    AND level NOT IN ('error', 'critical');
-    
-    -- Delete old audit logs
-    DELETE FROM audit_logs 
-    WHERE created_at < cleanup_date;
-    
-    -- Delete old status change logs
-    DELETE FROM status_change_logs 
-    WHERE created_at < cleanup_date;
-END;
-
--- Create event to automatically clean logs older than 90 days
-CREATE EVENT cleanup_logs_event
-ON SCHEDULE EVERY 1 DAY
-STARTS CURRENT_TIMESTAMP
-DO
-    CALL cleanup_old_logs(90);
-
 -- Record this migration
-INSERT INTO migrations (version) VALUES ('4.0');
+INSERT INTO migrations (version, name) VALUES ('4.0', 'V4__audit_and_logging_tables_schema.sql');
+COMMIT;
