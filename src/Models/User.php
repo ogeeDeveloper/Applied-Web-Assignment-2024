@@ -516,4 +516,25 @@ class User
             return false;
         }
     }
+
+    public function getPendingFarmers(int $limit = 5): array
+    {
+        try {
+            $sql = "SELECT u.id, u.name, fp.farm_name, fp.farm_type, fp.location, fp.created_at
+                FROM users u
+                JOIN farmer_profiles fp ON u.id = fp.user_id
+                WHERE fp.status = 'pending'
+                ORDER BY fp.created_at DESC
+                LIMIT :limit";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting pending farmers: " . $e->getMessage());
+            return [];
+        }
+    }
 }

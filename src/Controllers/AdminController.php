@@ -85,29 +85,82 @@ class AdminController extends BaseController
     public function dashboard(): void
     {
         try {
-            // Double-check admin authentication
-            if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== Roles::ADMIN) {
-                $this->redirect('/admin/login');
-                return;
-            }
-
+            // Initialize stats array with default values
             $stats = [
-                'users' => $this->userModel->getUserStats(),
-                'orders' => $this->orderModel->getOrderStats(),
+                'users' => [
+                    'total' => 0,
+                    'new' => 0,
+                    'active' => 0
+                ],
+                'orders' => [
+                    'total' => 0,
+                    'pending' => 0,
+                    'completed' => 0
+                ],
                 'products' => [
-                    'total' => $this->productModel->getTotalProducts(),
-                    'top' => $this->productModel->getTopProducts()
+                    'total' => 0,
+                    'out_of_stock' => 0
+                ],
+                'farmers' => [
+                    'total' => 0,
+                    'pending_approval' => 0,
+                    'active' => 0
                 ]
             ];
 
+            // Get stats from models with error handling
+            try {
+                $stats['users'] = $this->userModel->getUserStats() ?: $stats['users'];
+            } catch (Exception $e) {
+                $this->logger->error("Error getting user stats: " . $e->getMessage());
+            }
+
+            try {
+                $stats['orders'] = $this->orderModel->getOrderStats() ?: $stats['orders'];
+            } catch (Exception $e) {
+                $this->logger->error("Error getting order stats: " . $e->getMessage());
+            }
+
+            try {
+                $stats['products'] = [
+                    'total' => $this->productModel->getTotalProducts() ?: 0,
+                    'out_of_stock' => $this->productModel->getTotalProducts(null, 'out_of_stock') ?: 0
+                ];
+            } catch (Exception $e) {
+                $this->logger->error("Error getting product stats: " . $e->getMessage());
+            }
+
+            try {
+                $stats['farmers'] = $this->userModel->getFarmerStats() ?: $stats['farmers'];
+            } catch (Exception $e) {
+                $this->logger->error("Error getting farmer stats: " . $e->getMessage());
+            }
+
+            // Get recent data
+            $recentOrders = [];
+            $pendingFarmers = [];
+            try {
+                $recentOrders = $this->orderModel->getRecentOrders(5);
+                $pendingFarmers = $this->userModel->getPendingFarmers(5);
+            } catch (Exception $e) {
+                $this->logger->error("Error getting recent data: " . $e->getMessage());
+            }
+
+            // Render dashboard with all data
             $this->render('admin/dashboard', [
                 'stats' => $stats,
+                'recentOrders' => $recentOrders,
+                'pendingFarmers' => $pendingFarmers,
                 'pageTitle' => 'Admin Dashboard - AgriKonnect'
             ], $this->adminLayout);
         } catch (Exception $e) {
-            $this->logger->error("Admin dashboard error: " . $e->getMessage());
-            $this->setFlashMessage('Failed to load admin dashboard', 'error');
-            $this->redirect('/admin/login');
+            $this->logger->error("Dashboard error: " . $e->getMessage());
+            $this->setFlashMessage('Error loading dashboard', 'error');
+            $this->render('admin/dashboard', [
+                'stats' => $stats,
+                'error' => true,
+                'pageTitle' => 'Admin Dashboard - AgriKonnect'
+            ], $this->adminLayout);
         }
     }
 

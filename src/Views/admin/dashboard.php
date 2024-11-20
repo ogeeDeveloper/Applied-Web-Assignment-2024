@@ -1,7 +1,22 @@
 <?php
+
+use App\Utils\DataHelper as DH;
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+
+// Initialize default stats
+$defaultStats = [
+    'users' => ['total' => 0, 'new' => 0, 'active' => 0],
+    'orders' => ['total' => 0, 'pending' => 0],
+    'products' => ['total' => 0, 'out_of_stock' => 0],
+    'farmers' => ['total' => 0, 'pending_approval' => 0]
+];
+
+// Merge with provided stats, if any
+$stats = array_merge_recursive($defaultStats, $stats ?? []);
 ?>
 
 <!DOCTYPE html>
@@ -74,7 +89,7 @@ if (session_status() === PHP_SESSION_NONE) {
             <!-- Header -->
             <div class="mb-6">
                 <h1 class="text-2xl font-semibold text-gray-900">Dashboard Overview</h1>
-                <p class="text-sm text-gray-600">Welcome back, Administrator</p>
+                <p class="text-sm text-gray-600">Welcome back, <?= htmlspecialchars(DH::get($_SESSION, 'admin_name', 'Administrator')) ?></p>
             </div>
 
             <!-- Stats Cards -->
@@ -86,8 +101,12 @@ if (session_status() === PHP_SESSION_NONE) {
                         <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded">Active</span>
                     </div>
                     <div class="flex items-center mt-2">
-                        <h2 class="text-3xl font-bold text-gray-900"><?= number_format($stats['users']['total']) ?></h2>
-                        <span class="text-green-500 text-sm ml-2">+<?= $stats['users']['new'] ?> new</span>
+                        <h2 class="text-3xl font-bold text-gray-900">
+                            <?= DH::formatNumber(DH::get($stats, 'users.total', 0)) ?>
+                        </h2>
+                        <span class="text-green-500 text-sm ml-2">
+                            +<?= DH::formatNumber(DH::get($stats, 'users.new', 0)) ?> new
+                        </span>
                     </div>
                 </div>
 
@@ -98,8 +117,12 @@ if (session_status() === PHP_SESSION_NONE) {
                         <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Today</span>
                     </div>
                     <div class="flex items-center mt-2">
-                        <h2 class="text-3xl font-bold text-gray-900"><?= number_format($stats['orders']['total']) ?></h2>
-                        <span class="text-yellow-500 text-sm ml-2"><?= $stats['orders']['pending'] ?> pending</span>
+                        <h2 class="text-3xl font-bold text-gray-900">
+                            <?= DH::formatNumber(DH::get($stats, 'orders.total', 0)) ?>
+                        </h2>
+                        <span class="text-yellow-500 text-sm ml-2">
+                            <?= DH::formatNumber(DH::get($stats, 'orders.pending', 0)) ?> pending
+                        </span>
                     </div>
                 </div>
 
@@ -110,8 +133,12 @@ if (session_status() === PHP_SESSION_NONE) {
                         <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded">Inventory</span>
                     </div>
                     <div class="flex items-center mt-2">
-                        <h2 class="text-3xl font-bold text-gray-900"><?= number_format($stats['products']['total']) ?></h2>
-                        <span class="text-red-500 text-sm ml-2"><?= $stats['products']['out_of_stock'] ?> out of stock</span>
+                        <h2 class="text-3xl font-bold text-gray-900">
+                            <?= DH::formatNumber(DH::get($stats, 'products.total', 0)) ?>
+                        </h2>
+                        <span class="text-red-500 text-sm ml-2">
+                            <?= DH::formatNumber(DH::get($stats, 'products.out_of_stock', 0)) ?> out of stock
+                        </span>
                     </div>
                 </div>
 
@@ -122,21 +149,25 @@ if (session_status() === PHP_SESSION_NONE) {
                         <span class="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">Verified</span>
                     </div>
                     <div class="flex items-center mt-2">
-                        <h2 class="text-3xl font-bold text-gray-900"><?= number_format($stats['farmers']['total']) ?></h2>
-                        <span class="text-orange-500 text-sm ml-2"><?= $stats['farmers']['pending_approval'] ?> pending</span>
+                        <h2 class="text-3xl font-bold text-gray-900">
+                            <?= DH::formatNumber(DH::get($stats, 'farmers.total', 0)) ?>
+                        </h2>
+                        <span class="text-orange-500 text-sm ml-2">
+                            <?= DH::formatNumber(DH::get($stats, 'farmers.pending_approval', 0)) ?> pending
+                        </span>
                     </div>
                 </div>
             </div>
 
-            <!-- System Health -->
-            <?php if (isset($systemHealth)): ?>
+            <!-- System Health Section -->
+            <?php if (!empty($systemHealth)): ?>
                 <div class="p-4 bg-white rounded-lg shadow mb-6">
                     <h3 class="text-lg font-semibold mb-4">System Health Status</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <?php foreach ($systemHealth as $service => $status): ?>
                             <div class="flex items-center">
                                 <div class="w-3 h-3 rounded-full <?= $status === 'healthy' ? 'bg-green-500' : 'bg-red-500' ?> mr-2"></div>
-                                <span class="capitalize"><?= $service ?>: <?= ucfirst($status) ?></span>
+                                <span class="capitalize"><?= htmlspecialchars($service) ?>: <?= htmlspecialchars(ucfirst($status)) ?></span>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -159,20 +190,20 @@ if (session_status() === PHP_SESSION_NONE) {
                                             <div class="flex items-center space-x-4">
                                                 <div class="flex-1 min-w-0">
                                                     <p class="text-sm font-medium text-gray-900 truncate">
-                                                        <?= htmlspecialchars($farmer['name']) ?>
+                                                        <?= htmlspecialchars(DH::get($farmer, 'name', 'Unknown')) ?>
                                                     </p>
                                                     <p class="text-sm text-gray-500 truncate">
-                                                        <?= htmlspecialchars($farmer['farm_name']) ?>
+                                                        <?= htmlspecialchars(DH::get($farmer, 'farm_name', 'Unknown Farm')) ?>
                                                     </p>
                                                 </div>
                                                 <div class="inline-flex items-center">
                                                     <form action="/admin/farmers/approve" method="POST" class="inline">
-                                                        <input type="hidden" name="farmer_id" value="<?= $farmer['id'] ?>">
+                                                        <input type="hidden" name="farmer_id" value="<?= DH::get($farmer, 'id', 0) ?>">
                                                         <button type="submit" class="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2 mr-2">
                                                             Approve
                                                         </button>
                                                     </form>
-                                                    <button type="button" onclick="showRejectModal(<?= $farmer['id'] ?>)" class="text-white bg-red-500 hover:bg-red-600 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-2">
+                                                    <button type="button" onclick="showRejectModal(<?= DH::get($farmer, 'id', 0) ?>)" class="text-white bg-red-500 hover:bg-red-600 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-2">
                                                         Reject
                                                     </button>
                                                 </div>
@@ -201,33 +232,18 @@ if (session_status() === PHP_SESSION_NONE) {
                                             <div class="flex items-center space-x-4">
                                                 <div class="flex-1 min-w-0">
                                                     <p class="text-sm font-medium text-gray-900 truncate">
-                                                        Order #<?= htmlspecialchars($order['id']) ?>
+                                                        Order #<?= htmlspecialchars(DH::get($order, 'id', 'N/A')) ?>
                                                     </p>
                                                     <p class="text-sm text-gray-500 truncate">
-                                                        <?= htmlspecialchars($order['customer_name']) ?>
+                                                        <?= htmlspecialchars(DH::get($order, 'customer_name', 'Unknown Customer')) ?>
                                                     </p>
                                                 </div>
                                                 <div class="inline-flex items-center">
                                                     <span class="text-sm font-semibold text-gray-900">
-                                                        ₱<?= number_format($order['total_amount'], 2) ?>
+                                                        <?= DH::formatCurrency(DH::get($order, 'total_amount', 0)) ?>
                                                     </span>
-                                                    <span class="ml-2 px-2.5 py-0.5 text-xs font-medium rounded-full
-                                                    <?php
-                                                    switch ($order['status']) {
-                                                        case 'pending':
-                                                            echo 'bg-yellow-100 text-yellow-800';
-                                                            break;
-                                                        case 'processing':
-                                                            echo 'bg-blue-100 text-blue-800';
-                                                            break;
-                                                        case 'completed':
-                                                            echo 'bg-green-100 text-green-800';
-                                                            break;
-                                                        default:
-                                                            echo 'bg-gray-100 text-gray-800';
-                                                    }
-                                                    ?>">
-                                                        <?= ucfirst(htmlspecialchars($order['status'])) ?>
+                                                    <span class="ml-2 px-2.5 py-0.5 text-xs font-medium rounded-full <?= DH::getOrderStatusClass(DH::get($order, 'status', 'pending')) ?>">
+                                                        <?= ucfirst(htmlspecialchars(DH::get($order, 'status', 'pending'))) ?>
                                                     </span>
                                                 </div>
                                             </div>
@@ -242,59 +258,58 @@ if (session_status() === PHP_SESSION_NONE) {
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Reject Farmer Modal -->
-    <div id="rejectModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Reject Farmer Application</h3>
-                <div class="mt-2 px-7 py-3">
-                    <form id="rejectForm" action="/admin/farmers/reject" method="POST">
-                        <input type="hidden" id="reject_farmer_id" name="farmer_id">
-                        <div class="mb-4">
-                            <label for="reason" class="block text-sm font-medium text-gray-700 text-left mb-2">Reason for Rejection</label>
-                            <textarea
-                                id="reason"
-                                name="reason"
-                                rows="3"
-                                class="shadow-sm focus:ring-green-500 focus:border-green-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                                required></textarea>
-                        </div>
-                        <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="closeRejectModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm">
-                                Cancel
-                            </button>
-                            <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:w-auto sm:text-sm">
-                                Reject
-                            </button>
-                        </div>
-                    </form>
+        <!-- Reject Farmer Modal -->
+        <div id="rejectModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Reject Farmer Application</h3>
+                    <div class="mt-2 px-7 py-3">
+                        <form id="rejectForm" action="/admin/farmers/reject" method="POST">
+                            <input type="hidden" id="reject_farmer_id" name="farmer_id">
+                            <div class="mb-4">
+                                <label for="reason" class="block text-sm font-medium text-gray-700 text-left mb-2">Reason for Rejection</label>
+                                <textarea
+                                    id="reason"
+                                    name="reason"
+                                    rows="3"
+                                    class="shadow-sm focus:ring-green-500 focus:border-green-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
+                                    required></textarea>
+                            </div>
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" onclick="closeRejectModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:w-auto sm:text-sm">
+                                    Reject
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
-    <script>
-        function showRejectModal(farmerId) {
-            document.getElementById('reject_farmer_id').value = farmerId;
-            document.getElementById('rejectModal').classList.remove('hidden');
-        }
-
-        function closeRejectModal() {
-            document.getElementById('rejectModal').classList.add('hidden');
-            document.getElementById('rejectForm').reset();
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('rejectModal');
-            if (event.target == modal) {
-                closeRejectModal();
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
+        <script>
+            function showRejectModal(farmerId) {
+                document.getElementById('reject_farmer_id').value = farmerId;
+                document.getElementById('rejectModal').classList.remove('hidden');
             }
-        }
-    </script>
+
+            function closeRejectModal() {
+                document.getElementById('rejectModal').classList.add('hidden');
+                document.getElementById('rejectForm').reset();
+            }
+
+            // Close modal when clicking outside
+            window.onclick = function(event) {
+                const modal = document.getElementById('rejectModal');
+                if (event.target == modal) {
+                    closeRejectModal();
+                }
+            }
+        </script>
 </body>
 
 </html>
