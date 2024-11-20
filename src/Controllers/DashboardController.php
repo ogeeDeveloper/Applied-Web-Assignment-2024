@@ -1,5 +1,10 @@
 <?php
+
 namespace App\Controllers;
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 use PDO;
 use App\Models\User;
@@ -8,8 +13,11 @@ use App\Models\Product;
 use App\Models\Crop;
 use App\Models\SystemHealth;
 use App\Models\Activity;
+use App\Constants\Roles;
+use App\Utils\SessionManager;
 
-class DashboardController {
+class DashboardController extends BaseController
+{
     private $db;
     private $logger;
     private $productModel;
@@ -19,18 +27,33 @@ class DashboardController {
     private $systemHealth;
     private $activityModel;
 
-    public function __construct(PDO $db, $logger) {
-        $this->db = $db;
-        $this->logger = $logger;
+    public function __construct(PDO $db, $logger)
+    {
+        parent::__construct($db, $logger);
+        SessionManager::validateActivity();
         $this->productModel = new Product($db, $logger);
         $this->orderModel = new Order($db, $logger);
         $this->cropModel = new Crop($db, $logger);
         $this->userModel = new User($db, $logger);
         $this->systemHealth = new SystemHealth($db, $logger);
         $this->activityModel = new Activity($db, $logger);
+
+        // Validate role based on the requested dashboard
+        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $requiredRole = match ($path) {
+            '/admin/dashboard' => Roles::ADMIN,
+            '/farmer/dashboard' => Roles::FARMER,
+            '/customer/dashboard' => Roles::CUSTOMER,
+            default => null
+        };
+
+        if ($requiredRole) {
+            $this->validateRole($requiredRole);
+        }
     }
 
-    public function customerDashboard(): array {
+    public function customerDashboard(): array
+    {
         try {
             $userId = $_SESSION['user_id'];
             $this->logger->info("Loading customer dashboard for user: {$userId}");
@@ -56,7 +79,8 @@ class DashboardController {
         }
     }
 
-    public function farmerDashboard(): array {
+    public function farmerDashboard(): array
+    {
         try {
             $farmerId = $_SESSION['user_id'];
             $this->logger->info("Loading farmer dashboard for user: {$farmerId}");
@@ -79,7 +103,8 @@ class DashboardController {
         }
     }
 
-    public function adminDashboard(): array {
+    public function adminDashboard(): array
+    {
         try {
             $this->logger->info("Loading admin dashboard");
 
@@ -101,7 +126,8 @@ class DashboardController {
         }
     }
 
-    private function getMonthlyStats($farmerId): array {
+    private function getMonthlyStats($farmerId): array
+    {
         // Implementation for monthly statistics
         return [
             'totalSales' => $this->orderModel->getMonthlyTotal($farmerId),
@@ -110,7 +136,8 @@ class DashboardController {
         ];
     }
 
-    private function getUserStats(): array {
+    private function getUserStats(): array
+    {
         // Implementation for user statistics
         return [
             'totalUsers' => $this->userModel->getTotalCount(),
@@ -119,7 +146,8 @@ class DashboardController {
         ];
     }
 
-    private function getSystemHealth(): array {
+    private function getSystemHealth(): array
+    {
         return [
             'dbStatus' => $this->systemHealth->checkDatabaseHealth(),
             'storageStatus' => $this->systemHealth->checkStorageHealth(),

@@ -1,5 +1,10 @@
 <?php
+
 namespace App\Controllers;
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 use PDO;
 use Exception;
@@ -7,26 +12,84 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SystemHealth;
+use App\Utils\SessionManager;
+use App\Constants\Roles;
 
-class AdminController extends BaseController {
+class AdminController extends BaseController
+{
     private User $userModel;
     private Order $orderModel;
     private Product $productModel;
     private SystemHealth $systemHealth;
+    private string $adminLayout = 'admin/layouts/admin';
 
-
-    public function __construct(PDO $db, $logger) {
+    public function __construct(PDO $db, $logger)
+    {
         parent::__construct($db, $logger);
         $this->userModel = new User($db, $logger);
         $this->orderModel = new Order($db, $logger);
         $this->productModel = new Product($db, $logger);
         $this->systemHealth = new SystemHealth($db, $logger);
+
+        // Initialize session
+        SessionManager::initialize();
+        SessionManager::validateActivity();
+
+        // Only validate admin access for non-login routes
+        $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        if (!in_array($currentPath, ['/admin/login', '/admin/forgot-password'])) {
+            $this->validateAdminAccess();
+        }
     }
 
-    public function dashboard(): void {
+    private function validateAdminAccess(): void
+    {
+        if (
+            !isset($_SESSION['user_role']) ||
+            $_SESSION['user_role'] !== Roles::ADMIN ||
+            !isset($_SESSION['is_authenticated']) ||
+            $_SESSION['is_authenticated'] !== true ||
+            !isset($_SESSION['admin_id'])
+        ) {
+
+            // Log the failed access attempt
+            $this->logger->warning('Unauthorized admin access attempt', [
+                'session' => $_SESSION,
+                'uri' => $_SERVER['REQUEST_URI']
+            ]);
+
+            // Clear the invalid session
+            SessionManager::destroy();
+
+            // Redirect to login
+            $this->redirect('/admin/login');
+            exit;
+        }
+
+        // Update last activity
+        $_SESSION['last_activity'] = time();
+    }
+
+    private function clearAdminSession(): void
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $_SESSION = array();
+        session_destroy();
+        if (isset($_COOKIE[session_name()])) {
+            setcookie(session_name(), '', time() - 3600, '/');
+        }
+    }
+
+    public function dashboard(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // Double-check admin authentication
+            if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== Roles::ADMIN) {
+                $this->redirect('/admin/login');
+                return;
+            }
 
             $stats = [
                 'users' => $this->userModel->getUserStats(),
@@ -34,34 +97,36 @@ class AdminController extends BaseController {
                 'products' => [
                     'total' => $this->productModel->getTotalProducts(),
                     'top' => $this->productModel->getTopProducts()
-                ],
-                'farmers' => $this->userModel->getFarmerStats()
+                ]
             ];
 
-            $this->render('admin/dashboard', ['stats' => $stats]);
+            $this->render('admin/dashboard', [
+                'stats' => $stats,
+                'pageTitle' => 'Admin Dashboard - AgriKonnect'
+            ], $this->adminLayout);
         } catch (Exception $e) {
             $this->logger->error("Admin dashboard error: " . $e->getMessage());
-            $this->redirect('/error', 'Failed to load admin dashboard');
+            $this->setFlashMessage('Failed to load admin dashboard', 'error');
+            $this->redirect('/admin/login');
         }
     }
 
-    public function manageFarmers(): void {
+    public function manageFarmers(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
-
             $farmers = $this->userModel->getAllFarmers();
-            $this->render('admin/farmers', ['farmers' => $farmers]);
+            $this->render('admin/farmers', ['farmers' => $farmers], $this->adminLayout);
         } catch (Exception $e) {
             $this->logger->error("Farmer management error: " . $e->getMessage());
-            $this->redirect('/error', 'Failed to load farmer management');
+            $this->setFlashMessage('Failed to load farmer management', 'error');
+            $this->redirect('/admin/farmers');
         }
     }
-
-    public function manageCustomers(): void {
+    public function manageCustomers(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // $this->validateAuthenticatedRequest();
+            // $this->validateAdminRole();
 
             $customers = $this->userModel->getAllCustomers();
             $this->render('admin/customers', ['customers' => $customers]);
@@ -71,10 +136,11 @@ class AdminController extends BaseController {
         }
     }
 
-    public function orderManagement(): void {
+    public function orderManagement(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // $this->validateAuthenticatedRequest();
+            // $this->validateAdminRole();
 
             $orders = $this->orderModel->getAllOrders();
             $this->render('admin/orders', ['orders' => $orders]);
@@ -84,10 +150,11 @@ class AdminController extends BaseController {
         }
     }
 
-    public function productManagement(): void {
+    public function productManagement(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // $this->validateAuthenticatedRequest();
+            // $this->validateAdminRole();
 
             $products = $this->productModel->getAllProducts();
             $this->render('admin/products', ['products' => $products]);
@@ -97,10 +164,11 @@ class AdminController extends BaseController {
         }
     }
 
-    public function systemHealth(): void {
+    public function systemHealth(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // $this->validateAuthenticatedRequest();
+            // $this->validateAdminRole();
 
             $health = [
                 'database' => $this->systemHealth->checkDatabaseHealth(),
@@ -122,11 +190,9 @@ class AdminController extends BaseController {
         }
     }
 
-    public function approveNewFarmer(): void {
+    public function approveNewFarmer(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
-
             $input = $this->validateInput([
                 'farmer_id' => 'int'
             ]);
@@ -134,7 +200,7 @@ class AdminController extends BaseController {
             $result = $this->userModel->updateFarmerStatus(
                 $input['farmer_id'],
                 'active',
-                $_SESSION['user_id']
+                $_SESSION['admin_id']
             );
 
             $this->jsonResponse([
@@ -150,10 +216,11 @@ class AdminController extends BaseController {
         }
     }
 
-    public function suspendUser(): void {
+    public function suspendUser(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // $this->validateAuthenticatedRequest();
+            // $this->validateAdminRole();
 
             $input = $this->validateInput([
                 'user_id' => 'int',
@@ -164,7 +231,7 @@ class AdminController extends BaseController {
                 $input['user_id'],
                 'suspended',
                 $input['reason'],
-                $_SESSION['user_id']
+                $_SESSION['admin_id']
             );
 
             $this->jsonResponse([
@@ -180,10 +247,11 @@ class AdminController extends BaseController {
         }
     }
 
-    public function getSystemMetrics(): void {
+    public function getSystemMetrics(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // $this->validateAuthenticatedRequest();
+            // $this->validateAdminRole();
 
             $metrics = [
                 'users' => [
@@ -217,10 +285,11 @@ class AdminController extends BaseController {
         }
     }
 
-    public function getUserAuditLog(): void {
+    public function getUserAuditLog(): void
+    {
         try {
-            $this->validateAuthenticatedRequest();
-            $this->validateAdminRole();
+            // $this->validateAuthenticatedRequest();
+            // $this->validateAdminRole();
 
             $input = $this->validateInput([
                 'user_id' => 'int',
@@ -247,7 +316,8 @@ class AdminController extends BaseController {
         }
     }
 
-    public function getSystemLogs(): void {
+    public function getSystemLogs(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
             $this->validateAdminRole();
@@ -279,11 +349,11 @@ class AdminController extends BaseController {
         }
     }
 
-    protected function validateAdminRole(): void {
+    protected function validateAdminRole(): void
+    {
         if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
             $this->logger->warning('Unauthorized access attempt to admin area');
             throw new Exception('Unauthorized access to admin area', 403);
         }
     }
-
 }

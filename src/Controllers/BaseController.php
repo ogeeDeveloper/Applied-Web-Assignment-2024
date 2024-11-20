@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use Exception;
+use App\Constants\Roles;
 
 class BaseController
 {
@@ -56,6 +57,28 @@ class BaseController
     }
 
     /**
+     * Get the appropriate redirect URL based on user role
+     * @return string
+     */
+    protected function getRedirectUrl(): string
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        if (!isset($_SESSION['user_role'])) {
+            return '/login';
+        }
+
+        return match ($_SESSION['user_role']) {
+            'admin' => '/admin/dashboard',
+            'farmer' => '/farmer/dashboard',
+            'customer' => '/customer/dashboard',
+            default => '/login'
+        };
+    }
+
+    /**
      * Validate that the request is from an authenticated user
      * @throws Exception if user is not authenticated
      */
@@ -67,7 +90,8 @@ class BaseController
 
         if (!isset($_SESSION['user_id'])) {
             $this->logger->warning('Unauthorized access attempt');
-            throw new Exception('Unauthorized access', 401);
+            $this->redirect('/login', null, 'error');
+            exit;
         }
     }
 
@@ -79,9 +103,23 @@ class BaseController
     protected function validateRole(string $requiredRole): void
     {
         if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $requiredRole) {
-            $this->logger->warning("Unauthorized role access attempt: {$_SESSION['user_role']} trying to access {$requiredRole} area");
-            throw new Exception('Unauthorized role access', 403);
+            $this->logger->warning("Unauthorized role access attempt", [
+                'required' => $requiredRole,
+                'actual' => $_SESSION['user_role'] ?? 'none'
+            ]);
+            $this->redirect($this->getLoginUrlForRole($requiredRole), 'Unauthorized access', 'error');
+            exit;
         }
+    }
+
+    protected function getLoginUrlForRole(string $role): string
+    {
+        return match ($role) {
+            Roles::ADMIN => '/admin/login',
+            Roles::FARMER => '/farmer/login',
+            Roles::CUSTOMER => '/login',
+            default => '/login',
+        };
     }
 
     /**
@@ -308,18 +346,38 @@ class BaseController
      * @param array $extraData Optional additional data to store
      * @return void
      */
-    protected function redirect(string $url, ?string $message = null, string $type = 'success', array $extraData = []): void
+    protected function redirect(string $url, ?string $message = null, string $type = 'success'): void
     {
+        error_log("[REDIRECT]: Redirecting to {$url}");
+        if (!headers_sent()) {
+            header("Location: {$url}");
+            exit;
+        }
+
         if ($message) {
-            $this->setFlashMessage($message, $type, $extraData);
+            $this->setFlashMessage($message, $type);
         }
 
-        // Ensure the URL starts with a forward slash if it's a relative path
-        if (!preg_match('/^(http|https):\/\//', $url) && $url !== '/') {
-            $url = '/' . ltrim($url, '/');
+        // Prevent redirect loops
+        static $redirectCount = 0;
+        $redirectCount++;
+
+        if ($redirectCount > 3) {
+            // Log potential infinite redirect
+            $this->logger->error("Potential redirect loop detected", [
+                'url' => $url,
+                'session' => $_SESSION ?? [],
+                'trace' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS)
+            ]);
+            http_response_code(500);
+            die('Error: Too many redirects');
         }
 
-        header("Location: $url");
+        if (!headers_sent()) {
+            header("Location: $url");
+        } else {
+            echo '<script>window.location.href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '";</script>';
+        }
         exit;
     }
 
@@ -386,5 +444,29 @@ class BaseController
         }
 
         return $oldInput[$key] ?? $default;
+    }
+
+    /**
+     * Validate admin role
+     * @throws Exception if role validation fails
+     */
+    protected function validateAdminRole(): void
+    {
+        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+            $this->logger->warning('Unauthorized access attempt to admin area');
+            // Instead of throwing exception, redirect to unauthorized page
+            header('Location: /unauthorized');
+            exit;
+        }
+    }
+
+    protected function getRedirectUrlForRole(string $role): string
+    {
+        return match ($role) {
+            Roles::ADMIN => '/admin/dashboard',
+            Roles::FARMER => '/farmer/dashboard',
+            Roles::CUSTOMER => '/customer/dashboard',
+            default => '/login',
+        };
     }
 }

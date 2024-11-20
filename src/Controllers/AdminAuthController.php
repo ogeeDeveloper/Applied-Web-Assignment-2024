@@ -5,6 +5,9 @@ namespace App\Controllers;
 use App\Models\User;
 use PDO;
 use PDOException;
+use App\Constants\Roles;
+use App\Utils\SessionManager;
+use Exception;
 
 class AdminAuthController extends BaseController
 {
@@ -15,6 +18,7 @@ class AdminAuthController extends BaseController
     {
         parent::__construct($db, $logger);
         $this->userModel = new User($db, $logger);
+        SessionManager::initialize();
     }
 
     /**
@@ -22,9 +26,19 @@ class AdminAuthController extends BaseController
      */
     public function showLoginForm(): void
     {
+        // If already authenticated as admin, redirect to dashboard
         if ($this->isAdminAuthenticated()) {
-            $this->redirect('/admin/dashboard');
-            return;
+            $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+            if ($currentPath === '/admin/login') {
+                $this->redirect('/admin/dashboard');
+                return;
+            }
+        }
+
+        // Clear any existing session if on login page
+        if (!$this->isAdminAuthenticated()) {
+            SessionManager::destroy();
+            SessionManager::initialize();
         }
 
         $this->render('admin/login', [
@@ -38,6 +52,11 @@ class AdminAuthController extends BaseController
     public function login(): void
     {
         try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                $this->redirect('/admin/login');
+                return;
+            }
+
             $input = $this->validateInput([
                 'email' => 'email',
                 'password' => 'string'
@@ -45,38 +64,53 @@ class AdminAuthController extends BaseController
 
             $user = $this->userModel->findByEmail($input['email']);
 
-            if (!$user || !password_verify($input['password'], $user['password']) || $user['role'] !== 'admin') {
+            if (!$user || !password_verify($input['password'], $user['password'])) {
                 $this->setFlashMessage('Invalid credentials', 'error');
                 $this->redirect('/admin/login');
                 return;
             }
 
-            // Start admin session
-            $this->startAdminSession($user);
+            if ($user['role'] !== Roles::ADMIN) {
+                $this->setFlashMessage('Unauthorized access', 'error');
+                $this->redirect('/admin/login');
+                return;
+            }
 
-            // Log successful login
-            $this->logger->info("Admin login successful: {$input['email']}");
+            // Clear any existing session
+            SessionManager::destroy();
+            SessionManager::initialize();
 
-            // Redirect to intended page or dashboard
-            $redirectUrl = $_GET['redirect'] ?? '/admin/dashboard';
-            $this->redirect($redirectUrl);
+            // Start new session with regenerated ID
+            SessionManager::regenerate();
+
+            // Set admin session data
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['user_role'] = Roles::ADMIN;
+            $_SESSION['is_authenticated'] = true;
+            $_SESSION['admin_id'] = $user['id'];
+            $_SESSION['last_activity'] = time();
+
+            $this->logger->info('Admin login successful', [
+                'user_id' => $user['id'],
+                'email' => $user['email']
+            ]);
+
+            $this->redirect('/admin/dashboard', 'Welcome back!', 'success');
         } catch (Exception $e) {
-            $this->logger->error("Admin login error: " . $e->getMessage());
+            $this->logger->error("Login error: " . $e->getMessage());
             $this->setFlashMessage('An error occurred during login', 'error');
             $this->redirect('/admin/login');
         }
     }
+
 
     /**
      * Handle admin logout
      */
     public function logout(): void
     {
-        // Clean up admin session
-        $this->clearAdminSession();
-
-        $this->setFlashMessage('You have been logged out successfully', 'success');
-        $this->redirect('/admin/login');
+        SessionManager::destroy();
+        $this->redirect('/admin/login', 'You have been logged out successfully', 'success');
     }
 
     /**
@@ -132,16 +166,19 @@ class AdminAuthController extends BaseController
             session_start();
         }
 
-        // Regenerate session ID for security
+        // Clear any existing session data
+        $_SESSION = array();
+
+        // Regenerate session ID
         session_regenerate_id(true);
 
+        // Set session variables
         $_SESSION['admin_id'] = $user['id'];
         $_SESSION['admin_email'] = $user['email'];
         $_SESSION['admin_name'] = $user['name'];
-        $_SESSION['user_role'] = 'admin'; // Keep this for compatibility with existing code
-
-        // Set last login time
-        $this->userModel->updateLastLogin($user['id']);
+        $_SESSION['user_role'] = 'admin';
+        $_SESSION['is_authenticated'] = true;
+        $_SESSION['last_activity'] = time();
     }
 
     /**
@@ -168,9 +205,10 @@ class AdminAuthController extends BaseController
      */
     private function isAdminAuthenticated(): bool
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-        return isset($_SESSION['admin_id']) && isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+        return isset($_SESSION['user_role']) &&
+            $_SESSION['user_role'] === Roles::ADMIN &&
+            isset($_SESSION['is_authenticated']) &&
+            $_SESSION['is_authenticated'] === true &&
+            isset($_SESSION['admin_id']);
     }
 }

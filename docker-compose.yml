@@ -11,6 +11,7 @@ services:
       - ./vendor:/var/www/vendor
       - ./docker:/var/www/docker
       - ./.env:/var/www/.env
+      - ./storage/logs:/var/www/storage/logs
     environment:
       MYSQL_HOST: mysql
       MYSQL_DATABASE: ${MYSQL_DATABASE}

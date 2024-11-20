@@ -29,6 +29,7 @@ class User
         return (int) $this->db->lastInsertId();
     }
 
+
     public function findByEmail(string $email): ?array
     {
         $stmt = $this->db->prepare("SELECT * FROM users WHERE email = :email");

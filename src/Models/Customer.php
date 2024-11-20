@@ -4,20 +4,48 @@ namespace App\Models;
 
 use PDO;
 
-class Customer {
+class Customer
+{
     private $db;
     private $logger;
 
-    public function __construct(PDO $db, $logger) {
+    public function __construct(PDO $db, $logger)
+    {
         $this->db = $db;
         $this->logger = $logger;
     }
 
-    public function findByEmail($email) {
+    public function findByEmail($email)
+    {
         $stmt = $this->db->prepare("SELECT * FROM customers WHERE email = :email");
         $stmt->bindParam(':email', $email);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function createCustomerProfile(int $userId, array $data): void
+    {
+        try {
+            $stmt = $this->db->prepare("
+            INSERT INTO customer_profiles (
+                user_id, address, phone_number, preferences, created_at
+            ) VALUES (
+                :user_id, :address, :phone_number, :preferences, :created_at
+            )
+        ");
+
+            $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+            $stmt->bindValue(':address', $data['address'], PDO::PARAM_STR);
+            $stmt->bindValue(':phone_number', $data['phone_number'], PDO::PARAM_STR);
+            $stmt->bindValue(':preferences', json_encode($data['preferences'] ?? []), PDO::PARAM_STR);
+            $stmt->bindValue(':created_at', date('Y-m-d H:i:s'), PDO::PARAM_STR);
+
+            $stmt->execute();
+        } catch (PDOException $e) {
+            // Log error and rethrow
+            $this->logger->error("Failed to create customer profile for user ID {$userId}: " . $e->getMessage());
+            throw new Exception("Failed to create customer profile: " . $e->getMessage());
+        }
     }
 
     /**
@@ -31,7 +59,8 @@ class Customer {
      *               If the update is successful, 'success' will be true and 'message' will be 'Preferences updated successfully'.
      *               If an error occurs during the update, 'success' will be false and 'message' will be 'Failed to update preferences'.
      */
-    public function updatePreferences(int $userId, array $data): array {
+    public function updatePreferences(int $userId, array $data): array
+    {
         try {
             $sql = "UPDATE customer_profiles 
                     SET 
@@ -73,7 +102,8 @@ class Customer {
      * @return array An array of customer orders, each containing order details, product name, farm name, and farmer name.
      *               If an error occurs during the database operation, an empty array is returned.
      */
-    public function getCustomerOrders(int $customerId, int $page = 1, int $limit = 10): array {
+    public function getCustomerOrders(int $customerId, int $page = 1, int $limit = 10): array
+    {
         try {
             $offset = ($page - 1) * $limit;
 
@@ -101,5 +131,4 @@ class Customer {
             return [];
         }
     }
-
 }

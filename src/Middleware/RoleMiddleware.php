@@ -2,6 +2,15 @@
 
 namespace App\Middleware;
 
+use App\Constants\Roles;
+use App\Utils\SessionManager;
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+use App\Utils\Functions;
+
 class RoleMiddleware
 {
     private $logger;
@@ -17,45 +26,28 @@ class RoleMiddleware
      * @param string $role Required role for access
      * @return callable Middleware function
      */
-    public function handle($role)
+    public function handle(string $requiredRole): bool
     {
-        return function () use ($role) {
-            // Check if session is not already started
-            if (session_status() === PHP_SESSION_NONE) {
-                session_start();
+        SessionManager::validateActivity();
+
+        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $requiredRole) {
+            $this->logger->warning("Unauthorized access attempt", [
+                'required_role' => $requiredRole,
+                'current_role' => $_SESSION['user_role'] ?? 'none'
+            ]);
+
+            $loginUrl = $this->getLoginUrlForRole($requiredRole);
+
+            // Prevent redirect loops
+            if ($_SERVER['REQUEST_URI'] !== $loginUrl) {
+                header("Location: $loginUrl");
+                exit;
             }
 
-            // Check if user is authenticated
-            if (!isset($_SESSION['user_id'])) {
-                $this->logger->warning("Unauthorized access attempt to restricted area");
-                $this->redirectToLogin();
-                return false;
-            }
-
-            // Check if user has required role
-            if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $role) {
-                $this->logger->warning("Access denied for user {$_SESSION['user_id']} trying to access {$role} area");
-                $this->redirectToUnauthorized();
-                return false;
-            }
-
-            return true;
-        };
-    }
-
-    /**
-     * Redirect to login page with current URL as redirect parameter
-     */
-    private function redirectToLogin(): void
-    {
-        if (!headers_sent()) {
-            header('Location: /admin/login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
-            exit();
+            return false;
         }
-        // Fallback if headers already sent
-        echo '<script>window.location.href="/admin/login?redirect=' . urlencode($_SERVER['REQUEST_URI']) . '";</script>';
-        echo 'If you are not redirected, <a href="/admin/login">click here</a>.';
-        exit();
+
+        return true;
     }
 
     /**
@@ -63,6 +55,14 @@ class RoleMiddleware
      */
     private function redirectToUnauthorized(): void
     {
+        $currentUri = $_SERVER['REQUEST_URI'];
+
+        // Avoid redirecting to the same unauthorized page repeatedly
+        if ($currentUri === '/unauthorized') {
+            echo 'You do not have access to this page. If you think this is a mistake, contact the administrator.';
+            exit();
+        }
+
         if (!headers_sent()) {
             header('Location: /unauthorized');
             exit();
@@ -71,5 +71,39 @@ class RoleMiddleware
         echo '<script>window.location.href="/unauthorized";</script>';
         echo 'If you are not redirected, <a href="/unauthorized">click here</a>.';
         exit();
+    }
+
+
+    /**
+     * Redirect to login page with current URL as redirect parameter
+     */
+    private function redirectToLogin(): void
+    {
+        $currentUri = $_SERVER['REQUEST_URI'];
+        $redirectUri = '/admin/login?redirect=' . urlencode($currentUri);
+
+        // Avoid redirecting to the same URI repeatedly
+        if ($currentUri === '/admin/login' || $currentUri === $redirectUri) {
+            echo 'You are being redirected to the login page. If this persists, <a href="/admin/login">click here</a>.';
+            exit();
+        }
+
+        if (!headers_sent()) {
+            header("Location: {$redirectUri}");
+            exit();
+        }
+        // Fallback if headers already sent
+        echo '<script>window.location.href="' . $redirectUri . '";</script>';
+        exit();
+    }
+
+    protected function getLoginUrlForRole(string $role): string
+    {
+        return match ($role) {
+            Roles::ADMIN => '/admin/login',
+            Roles::FARMER => '/farmer/login',
+            Roles::CUSTOMER => '/login',
+            default => '/login',
+        };
     }
 }

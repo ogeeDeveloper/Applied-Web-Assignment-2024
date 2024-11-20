@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Views\Auth;
+
 use App\Utils\Functions;
 
 if (!defined('APP_ROOT')) {
@@ -26,6 +28,13 @@ if (!defined('APP_ROOT')) {
             <h6 class="font-title--sm">Become a Farmer</h6>
             <p class="text-muted mb-4">Join our community of farmers and reach more customers</p>
 
+            <?php if (isset($_SESSION['flash_message'])): ?>
+                <div class="rounded-md p-4 <?= getAlertClass($_SESSION['flash_message']['type']) ?>">
+                    <p class="text-sm"><?= htmlspecialchars($_SESSION['flash_message']['message']) ?></p>
+                </div>
+            <?php unset($_SESSION['flash_message']);
+            endif; ?>
+
             <?php if (isset($_SESSION['error'])): ?>
                 <div class="form-input error">
                     <span class="icon icon-error">
@@ -39,7 +48,7 @@ if (!defined('APP_ROOT')) {
                 <!-- Personal Information -->
                 <div class="form-section">
                     <h3 class="form-section-title">Personal Information</h3>
-                    
+
                     <div class="form-input">
                         <input type="text" name="name" placeholder="Full Name" required>
                     </div>
@@ -63,7 +72,7 @@ if (!defined('APP_ROOT')) {
                 <!-- Farm Information -->
                 <div class="form-section">
                     <h3 class="form-section-title">Farm Information</h3>
-                    
+
                     <div class="form-input">
                         <input type="text" name="farm_name" placeholder="Farm Name" required>
                     </div>
@@ -133,97 +142,97 @@ if (!defined('APP_ROOT')) {
 </section>
 
 <style>
-.farmer-register-form {
-    max-width: 600px;
-    margin: 0 auto;
-}
+    .farmer-register-form {
+        max-width: 600px;
+        margin: 0 auto;
+    }
 
-.form-section {
-    margin-bottom: 2rem;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid #eee;
-}
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #eee;
+    }
 
-.form-section-title {
-    font-size: 1.1rem;
-    font-weight: 500;
-    margin-bottom: 1.5rem;
-    color: #333;
-}
+    .form-section-title {
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+        color: #333;
+    }
 
-.form-input select,
-.form-input textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    margin-bottom: 1rem;
-}
+    .form-input select,
+    .form-input textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-bottom: 1rem;
+    }
 
-.form-input textarea {
-    height: 100px;
-    resize: vertical;
-}
+    .form-input textarea {
+        height: 100px;
+        resize: vertical;
+    }
 
-.terms {
-    margin: 1.5rem 0;
-}
+    .terms {
+        margin: 1.5rem 0;
+    }
 
-.terms a {
-    color: #00B207;
-    text-decoration: none;
-}
+    .terms a {
+        color: #00B207;
+        text-decoration: none;
+    }
 
-.form-check {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
+    .form-check {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
 
-.form-check input[type="checkbox"] {
-    margin-top: 0.25rem;
-}
+    .form-check input[type="checkbox"] {
+        margin-top: 0.25rem;
+    }
 </style>
 
 <script>
-function togglePassword(button) {
-    const input = button.parentNode.querySelector('input');
-    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
-    input.setAttribute('type', type);
-    button.classList.toggle('active');
-}
+    function togglePassword(button) {
+        const input = button.parentNode.querySelector('input');
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        button.classList.toggle('active');
+    }
 
-document.getElementById('farmerRegisterForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    
-    fetch('/farmer/register', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.href = '/login?registered=1';
-        } else {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'form-input error';
-            alertDiv.innerHTML = `
+    document.getElementById('farmerRegisterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        fetch('/farmer/register', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/login?registered=1';
+                } else {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'form-input error';
+                    alertDiv.innerHTML = `
                 <span class="icon icon-error">
                     <!-- Error icon SVG -->
                 </span>
                 ${data.message}
             `;
-            this.insertBefore(alertDiv, this.firstChild);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
+                    this.insertBefore(alertDiv, this.firstChild);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
     });
-});
 </script>
