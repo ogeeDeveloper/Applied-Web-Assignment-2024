@@ -21,21 +21,23 @@ return [
         'POST /admin/logout' => ['AdminAuthController', 'logout'],
     ],
     'admin' => [
-        // Only protected admin routes
+        // Dashboard
         'GET /admin/dashboard' => ['AdminController', 'dashboard'],
-        'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
-        'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
+
+        // Farmer Management
+        'GET /admin/farmers' => ['AdminController', 'manageFarmers'],
         'GET /admin/farmers/{id}' => ['AdminController', 'viewFarmer'],
+        'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
         'POST /admin/farmers/reject' => ['AdminController', 'rejectFarmer'],
         'POST /admin/farmers/suspend' => ['AdminController', 'suspendFarmer'],
 
-        // API Endpoints for AJAX
-        'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
-
-        // System Health
+        // System
         'GET /admin/system' => ['AdminController', 'systemHealth'],
         'GET /admin/system/logs' => ['AdminController', 'systemLogs'],
-        'GET /admin/system/metrics' => ['AdminController', 'systemMetrics']
+        'GET /admin/system/metrics' => ['AdminController', 'systemMetrics'],
+
+        // API Endpoints
+        'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
     ],
     'protected' => [
         'GET /customer/dashboard' => ['CustomerController', 'dashboard'],

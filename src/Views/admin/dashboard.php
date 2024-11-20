@@ -32,7 +32,7 @@ $stats = array_merge_recursive($defaultStats, $stats ?? []);
 <body class="bg-gray-50">
     <div class="flex">
         <!-- Sidebar -->
-        <aside class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0">
+        <!-- <aside class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0">
             <div class="h-full px-3 py-4 overflow-y-auto bg-gray-800">
                 <a href="/admin/dashboard" class="flex items-center mb-5">
                     <img src="/assets/images/logo.png" class="h-8 mr-3" alt="AgriKonnect Logo" />
@@ -82,7 +82,8 @@ $stats = array_merge_recursive($defaultStats, $stats ?? []);
                     </li>
                 </ul>
             </div>
-        </aside>
+        </aside> -->
+        <?php include APP_ROOT . '/src/Views/admin/partials/sidebar.php'; ?>
 
         <!-- Main Content -->
         <div class="p-4 sm:ml-64">

@@ -9,6 +9,7 @@
 </head>
 
 <body class="bg-gray-50">
+    <?php include APP_ROOT . '/src/Views/admin/partials/sidebar.php'; ?>
     <div class="p-4 sm:ml-64">
         <!-- Header -->
         <div class="mb-6 flex justify-between items-center">
