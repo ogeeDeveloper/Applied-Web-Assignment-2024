@@ -100,6 +100,7 @@ class User
             return [
                 'total' => $this->getTotalFarmers(),
                 'active' => $this->getActiveFarmers(),
+                'pending_approval' => $this->getPendingFarmersCount(),
                 'topPerforming' => $this->getTopPerformingFarmers(),
                 'recentlyJoined' => $this->getRecentlyJoinedFarmers()
             ];
@@ -108,6 +109,7 @@ class User
             return [
                 'total' => 0,
                 'active' => 0,
+                'pending_approval' => 0,
                 'topPerforming' => [],
                 'recentlyJoined' => []
             ];
@@ -116,40 +118,52 @@ class User
 
     private function getActiveFarmers(): int
     {
-        $sql = "SELECT COUNT(*) 
-                FROM farmers 
-                WHERE farmer_trn IN (
-                    SELECT DISTINCT farmer_trn 
-                    FROM products 
-                    WHERE availability = TRUE
-                )";
-        $stmt = $this->db->query($sql);
-        return (int)$stmt->fetchColumn();
+        try {
+            $sql = "SELECT COUNT(*) 
+                FROM farmer_profiles 
+                WHERE status = 'active'";
+
+            $stmt = $this->db->query($sql);
+            return (int)$stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting active farmers: " . $e->getMessage());
+            return 0;
+        }
     }
 
     private function getRecentlyJoinedFarmers(int $limit = 5): array
     {
-        $sql = "SELECT * 
-                FROM farmers 
-                ORDER BY created_at DESC 
+        try {
+            $sql = "SELECT 
+                    fp.*,
+                    u.name,
+                    u.email
+                FROM farmer_profiles fp
+                JOIN users u ON fp.user_id = u.id
+                ORDER BY fp.created_at DESC
                 LIMIT :limit";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting recently joined farmers: " . $e->getMessage());
+            return [];
+        }
     }
 
-    public function updateFarmerStatus(int $farmerId, string $status, int $adminId): bool
+    public function updateFarmerStatus(int $farmerId, string $status, int $adminId, ?string $reason = null, ?string $duration = null): bool
     {
         try {
             $this->db->beginTransaction();
 
-            // Update farmer status
+            // First update the farmer_profiles status
             $sql = "UPDATE farmer_profiles 
-                    SET status = :status,
-                        updated_at = NOW() 
-                    WHERE farmer_id = :farmer_id";
+                   SET status = :status,
+                       updated_at = CURRENT_TIMESTAMP 
+                   WHERE farmer_id = :farmer_id";
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
@@ -157,15 +171,116 @@ class User
                 'farmer_id' => $farmerId
             ]);
 
+            // If suspending, create a suspension record
+            if ($status === 'suspended') {
+                $suspensionSql = "INSERT INTO farmer_suspensions (
+                    farmer_id,
+                    duration,
+                    reason,
+                    suspended_by,
+                    expires_at
+                ) VALUES (
+                    :farmer_id,
+                    :duration,
+                    :reason,
+                    :suspended_by,
+                    CASE 
+                        WHEN :duration = 'permanent' THEN NULL
+                        ELSE DATE_ADD(CURRENT_TIMESTAMP, INTERVAL :duration_days DAY)
+                    END
+                )";
+
+                $stmt = $this->db->prepare($suspensionSql);
+                $durationDays = $duration === 'permanent' ? null : (int)$duration;
+
+                $stmt->execute([
+                    'farmer_id' => $farmerId,
+                    'duration' => $duration ?? 'permanent',
+                    'reason' => $reason,
+                    'suspended_by' => $adminId,
+                    'duration_days' => $durationDays
+                ]);
+            }
+
             // Log the status change
-            $this->logStatusChange('farmer', $farmerId, $status, $adminId);
+            $this->logFarmerStatusChange($farmerId, $status, $adminId, $reason);
 
             $this->db->commit();
+
+            $this->logger->info("Farmer status updated successfully", [
+                'farmer_id' => $farmerId,
+                'status' => $status,
+                'admin_id' => $adminId,
+                'duration' => $duration ?? 'N/A'
+            ]);
+
             return true;
         } catch (\PDOException $e) {
             $this->db->rollBack();
             $this->logger->error("Error updating farmer status: " . $e->getMessage());
             return false;
+        }
+    }
+
+    public function getCurrentSuspension(int $farmerId): ?array
+    {
+        try {
+            $sql = "SELECT fs.*, u.name as suspended_by_name 
+                    FROM farmer_suspensions fs
+                    JOIN users u ON fs.suspended_by = u.id
+                    WHERE fs.farmer_id = :farmer_id
+                    AND (fs.expires_at IS NULL OR fs.expires_at > CURRENT_TIMESTAMP)
+                    ORDER BY fs.created_at DESC
+                    LIMIT 1";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['farmer_id' => $farmerId]);
+
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting current suspension: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function getSuspensionHistory(int $farmerId): array
+    {
+        try {
+            $sql = "SELECT fs.*, 
+                          u.name as suspended_by_name
+                   FROM farmer_suspensions fs
+                   JOIN users u ON fs.suspended_by = u.id
+                   WHERE fs.farmer_id = :farmer_id
+                   ORDER BY fs.created_at DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['farmer_id' => $farmerId]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting suspension history: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function logFarmerStatusChange(int $farmerId, string $status, int $adminId, ?string $reason = null): void
+    {
+        try {
+            $sql = "INSERT INTO farmer_status_logs (
+                        farmer_id, status, changed_by, reason, created_at
+                    ) VALUES (
+                        :farmer_id, :status, :changed_by, :reason, CURRENT_TIMESTAMP
+                    )";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'farmer_id' => $farmerId,
+                'status' => $status,
+                'changed_by' => $adminId,
+                'reason' => $reason
+            ]);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error logging farmer status change: " . $e->getMessage());
         }
     }
 
@@ -213,8 +328,9 @@ class User
     {
         try {
             $sql = "SELECT COUNT(*) 
-                    FROM farmer_profiles 
-                    WHERE status = 'pending'";
+                FROM farmer_profiles 
+                WHERE status = 'pending'";
+
             $stmt = $this->db->query($sql);
             return (int)$stmt->fetchColumn();
         } catch (\PDOException $e) {
@@ -227,19 +343,22 @@ class User
     {
         try {
             $sql = "SELECT 
-                        f.*,
-                        COUNT(DISTINCT o.order_id) as total_orders,
-                        SUM(oi.total_price) as total_revenue,
-                        AVG(p.stock_quantity) as avg_stock_level
-                    FROM farmer_profiles f
-                    JOIN products p ON f.farmer_id = p.farmer_id
-                    LEFT JOIN order_items oi ON p.product_id = oi.product_id
-                    LEFT JOIN orders o ON oi.order_id = o.order_id
-                    WHERE f.status = 'active'
+                    fp.*,
+                    u.name, 
+                    u.email,
+                    COUNT(DISTINCT o.order_id) as total_orders,
+                    COALESCE(SUM(oi.total_price), 0) as total_revenue,
+                    COALESCE(AVG(p.stock_quantity), 0) as avg_stock_level
+                FROM farmer_profiles fp
+                JOIN users u ON fp.user_id = u.id
+                LEFT JOIN products p ON fp.farmer_id = p.farmer_id
+                LEFT JOIN order_items oi ON p.product_id = oi.product_id
+                LEFT JOIN orders o ON oi.order_id = o.order_id
                     AND o.ordered_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
-                    GROUP BY f.farmer_id
-                    ORDER BY total_revenue DESC
-                    LIMIT :limit";
+                WHERE fp.status = 'active'
+                GROUP BY fp.farmer_id, u.id
+                ORDER BY total_revenue DESC
+                LIMIT :limit";
 
             $stmt = $this->db->prepare($sql);
             $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
@@ -559,25 +678,36 @@ class User
         }
     }
 
-    public function getFarmerDetails(int $id): ?array
+    public function getFarmerDetails(int $farmerId): ?array
     {
         try {
-            $sql = "SELECT u.*, fp.*, 
-                COUNT(DISTINCT p.product_id) as total_products,
-                COUNT(DISTINCT o.order_id) as total_orders,
-                SUM(o.total_amount) as total_revenue
-                FROM users u
-                JOIN farmer_profiles fp ON u.id = fp.user_id
+            $sql = "SELECT 
+                    fp.*,
+                    u.name,
+                    u.email,
+                    u.created_at as joined_date,
+                    COUNT(DISTINCT p.product_id) as total_products,
+                    COUNT(DISTINCT o.order_id) as total_orders,
+                    COALESCE(SUM(oi.total_price), 0) as total_revenue
+                FROM farmer_profiles fp
+                JOIN users u ON fp.user_id = u.id
                 LEFT JOIN products p ON fp.farmer_id = p.farmer_id
                 LEFT JOIN order_items oi ON p.product_id = oi.product_id
                 LEFT JOIN orders o ON oi.order_id = o.order_id
-                WHERE u.id = :id AND u.role = 'farmer'
-                GROUP BY u.id, fp.farmer_id";
+                WHERE fp.farmer_id = :farmer_id
+                GROUP BY fp.farmer_id, u.id";
 
             $stmt = $this->db->prepare($sql);
-            $stmt->execute(['id' => $id]);
+            $stmt->execute(['farmer_id' => $farmerId]);
 
-            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($farmer) {
+                // Get current suspension if any
+                $farmer['current_suspension'] = $this->getCurrentSuspension($farmerId);
+            }
+
+            return $farmer ?: null;
         } catch (\PDOException $e) {
             $this->logger->error("Error getting farmer details: " . $e->getMessage());
             return null;

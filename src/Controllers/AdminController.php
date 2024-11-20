@@ -459,6 +459,12 @@ class AdminController extends BaseController
                 'farmer_id' => 'int'
             ]);
 
+            if (!isset($_SESSION['user_id'])) {
+                $this->setFlashMessage('Authentication required', 'error');
+                $this->redirect('/admin/login');
+                return;
+            }
+
             $result = $this->userModel->updateFarmerStatus(
                 $input['farmer_id'],
                 'active',
@@ -471,7 +477,9 @@ class AdminController extends BaseController
                 $this->setFlashMessage('Failed to approve farmer', 'error');
             }
 
-            $this->redirect('/admin/farmers');
+            // Redirect back to the previous page or farmers list
+            $redirect = $_SERVER['HTTP_REFERER'] ?? '/admin/farmers';
+            $this->redirect($redirect);
         } catch (Exception $e) {
             $this->logger->error("Error approving farmer: " . $e->getMessage());
             $this->setFlashMessage('An error occurred while approving farmer', 'error');
@@ -517,30 +525,32 @@ class AdminController extends BaseController
                 'duration' => 'string'
             ]);
 
+            if (!isset($_SESSION['user_id'])) {
+                $this->setFlashMessage('Authentication required', 'error');
+                $this->redirect('/admin/login');
+                return;
+            }
+
             $result = $this->userModel->updateFarmerStatus(
                 $input['farmer_id'],
                 'suspended',
                 $_SESSION['user_id'],
-                $input['reason']
+                $input['reason'],
+                $input['duration']
             );
 
-            // Store suspension details
             if ($result) {
-                $this->userModel->storeSuspensionDetails(
-                    $input['farmer_id'],
-                    $input['duration'],
-                    $input['reason'],
-                    $_SESSION['user_id']
-                );
-                $this->setFlashMessage('Farmer account suspended successfully', 'success');
+                $this->setFlashMessage('Farmer has been suspended', 'success');
             } else {
-                $this->setFlashMessage('Failed to suspend farmer account', 'error');
+                $this->setFlashMessage('Failed to suspend farmer', 'error');
             }
 
-            $this->redirect('/admin/farmers');
+            // Redirect back to the previous page or farmers list
+            $redirect = $_SERVER['HTTP_REFERER'] ?? '/admin/farmers';
+            $this->redirect($redirect);
         } catch (Exception $e) {
             $this->logger->error("Error suspending farmer: " . $e->getMessage());
-            $this->setFlashMessage('An error occurred while suspending the farmer', 'error');
+            $this->setFlashMessage('An error occurred while suspending farmer', 'error');
             $this->redirect('/admin/farmers');
         }
     }
