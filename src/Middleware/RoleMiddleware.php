@@ -26,28 +26,30 @@ class RoleMiddleware
      * @param string $role Required role for access
      * @return callable Middleware function
      */
-    public function handle(string $requiredRole): bool
+    public function handle(string $requiredRole): callable
     {
-        SessionManager::validateActivity();
+        return function () use ($requiredRole) {
+            SessionManager::validateActivity();
 
-        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $requiredRole) {
-            $this->logger->warning("Unauthorized access attempt", [
-                'required_role' => $requiredRole,
-                'current_role' => $_SESSION['user_role'] ?? 'none'
-            ]);
+            if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $requiredRole) {
+                $this->logger->warning("Unauthorized access attempt", [
+                    'required_role' => $requiredRole,
+                    'current_role' => $_SESSION['user_role'] ?? 'none',
+                    'uri' => $_SERVER['REQUEST_URI']
+                ]);
 
-            $loginUrl = $this->getLoginUrlForRole($requiredRole);
-
-            // Prevent redirect loops
-            if ($_SERVER['REQUEST_URI'] !== $loginUrl) {
-                header("Location: $loginUrl");
-                exit;
+                // If not logged in at all, show 401
+                if (!isset($_SESSION['user_role'])) {
+                    showErrorPage(401, $this->logger);
+                }
+                // If logged in but wrong role, show 403
+                else {
+                    showErrorPage(403, $this->logger);
+                }
             }
 
-            return false;
-        }
-
-        return true;
+            return true;
+        };
     }
 
     /**
