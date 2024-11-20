@@ -78,4 +78,36 @@ class DataHelper
             default => 'bg-gray-100 text-gray-800',
         };
     }
+
+    public static function getLogLevelClass(string $level): string
+    {
+        return match (strtolower($level)) {
+            'emergency', 'alert', 'critical', 'error' => 'bg-red-100 text-red-800',
+            'warning' => 'bg-yellow-100 text-yellow-800',
+            'notice' => 'bg-blue-100 text-blue-800',
+            'info' => 'bg-green-100 text-green-800',
+            'debug' => 'bg-gray-100 text-gray-800',
+            default => 'bg-gray-100 text-gray-800'
+        };
+    }
+
+    /**
+     * Format file size to human readable format
+     *
+     * @param int $bytes
+     * @param int $precision
+     * @return string
+     */
+    public static function formatSize(int $bytes, int $precision = 2): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+
+        $bytes /= pow(1024, $pow);
+
+        return round($bytes, $precision) . ' ' . $units[$pow];
+    }
 }

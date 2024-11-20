@@ -330,20 +330,37 @@ class User
         }
     }
 
-    public function getAllFarmers(int $limit = null, int $offset = null): array
+    public function getAllFarmers(?array $filters = null, ?int $limit = null, ?int $offset = null): array
     {
         try {
             $sql = "SELECT u.*, fp.*, 
-                    COUNT(DISTINCT p.product_id) as total_products,
-                    COUNT(DISTINCT o.order_id) as total_orders
-                    FROM users u
-                    JOIN farmer_profiles fp ON u.id = fp.user_id
-                    LEFT JOIN products p ON fp.farmer_id = p.farmer_id
-                    LEFT JOIN order_items oi ON p.product_id = oi.product_id
-                    LEFT JOIN orders o ON oi.order_id = o.order_id
-                    WHERE u.role = 'farmer'
-                    GROUP BY u.id, fp.farmer_id
-                    ORDER BY u.created_at DESC";
+                COUNT(DISTINCT p.product_id) as total_products,
+                COUNT(DISTINCT o.order_id) as total_orders
+                FROM users u
+                JOIN farmer_profiles fp ON u.id = fp.user_id
+                LEFT JOIN products p ON fp.farmer_id = p.farmer_id
+                LEFT JOIN order_items oi ON p.product_id = oi.product_id
+                LEFT JOIN orders o ON oi.order_id = o.order_id
+                WHERE u.role = 'farmer'";
+
+            $params = [];
+
+            if ($filters) {
+                if (!empty($filters['status'])) {
+                    $sql .= " AND fp.status = :status";
+                    $params['status'] = $filters['status'];
+                }
+                if (!empty($filters['farm_type'])) {
+                    $sql .= " AND fp.farm_type = :farm_type";
+                    $params['farm_type'] = $filters['farm_type'];
+                }
+                if (!empty($filters['search'])) {
+                    $sql .= " AND (u.name LIKE :search OR fp.farm_name LIKE :search OR fp.location LIKE :search)";
+                    $params['search'] = "%{$filters['search']}%";
+                }
+            }
+
+            $sql .= " GROUP BY u.id, fp.farmer_id ORDER BY u.created_at DESC";
 
             if ($limit !== null) {
                 $sql .= " LIMIT :limit";
@@ -354,15 +371,19 @@ class User
 
             $stmt = $this->db->prepare($sql);
 
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+
             if ($limit !== null) {
-                $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
                 if ($offset !== null) {
-                    $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+                    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
                 }
             }
 
             $stmt->execute();
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             $this->logger->error("Error getting all farmers: " . $e->getMessage());
             return [];
@@ -535,6 +556,97 @@ class User
         } catch (\PDOException $e) {
             $this->logger->error("Error getting pending farmers: " . $e->getMessage());
             return [];
+        }
+    }
+
+    public function getFarmerDetails(int $id): ?array
+    {
+        try {
+            $sql = "SELECT u.*, fp.*, 
+                COUNT(DISTINCT p.product_id) as total_products,
+                COUNT(DISTINCT o.order_id) as total_orders,
+                SUM(o.total_amount) as total_revenue
+                FROM users u
+                JOIN farmer_profiles fp ON u.id = fp.user_id
+                LEFT JOIN products p ON fp.farmer_id = p.farmer_id
+                LEFT JOIN order_items oi ON p.product_id = oi.product_id
+                LEFT JOIN orders o ON oi.order_id = o.order_id
+                WHERE u.id = :id AND u.role = 'farmer'
+                GROUP BY u.id, fp.farmer_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['id' => $id]);
+
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting farmer details: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function storeSuspensionDetails(int $farmerId, string $duration, string $reason, int $adminId): bool
+    {
+        try {
+            $sql = "INSERT INTO farmer_suspensions (
+                    farmer_id, duration, reason, suspended_by, suspended_at, expires_at
+                ) VALUES (
+                    :farmer_id, :duration, :reason, :suspended_by, NOW(),
+                    CASE 
+                        WHEN :duration = 'permanent' THEN NULL
+                        ELSE DATE_ADD(NOW(), INTERVAL :duration_days DAY)
+                    END
+                )";
+
+            $durationDays = $duration === 'permanent' ? null : (int)$duration;
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'farmer_id' => $farmerId,
+                'duration' => $duration,
+                'duration_days' => $durationDays,
+                'reason' => $reason,
+                'suspended_by' => $adminId
+            ]);
+
+            return true;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error storing suspension details: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getTotalFarmersCount(?array $filters = null): int
+    {
+        try {
+            $sql = "SELECT COUNT(DISTINCT u.id)
+                FROM users u
+                JOIN farmer_profiles fp ON u.id = fp.user_id
+                WHERE u.role = 'farmer'";
+
+            $params = [];
+
+            if ($filters) {
+                if (!empty($filters['status'])) {
+                    $sql .= " AND fp.status = :status";
+                    $params['status'] = $filters['status'];
+                }
+                if (!empty($filters['farm_type'])) {
+                    $sql .= " AND fp.farm_type = :farm_type";
+                    $params['farm_type'] = $filters['farm_type'];
+                }
+                if (!empty($filters['search'])) {
+                    $sql .= " AND (u.name LIKE :search OR fp.farm_name LIKE :search OR fp.location LIKE :search)";
+                    $params['search'] = "%{$filters['search']}%";
+                }
+            }
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+
+            return (int)$stmt->fetchColumn();
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting total farmers count: " . $e->getMessage());
+            return 0;
         }
     }
 }

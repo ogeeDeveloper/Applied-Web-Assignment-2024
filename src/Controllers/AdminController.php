@@ -167,14 +167,44 @@ class AdminController extends BaseController
     public function manageFarmers(): void
     {
         try {
-            $farmers = $this->userModel->getAllFarmers();
-            $this->render('admin/farmers', ['farmers' => $farmers], $this->adminLayout);
+            // Get pagination parameters
+            $page = max(1, intval($_GET['page'] ?? 1));
+            $limit = 10;
+            $offset = ($page - 1) * $limit;
+
+            // Get filter parameters
+            $filters = [
+                'status' => $_GET['status'] ?? null,
+                'farm_type' => $_GET['farm_type'] ?? null,
+                'search' => $_GET['search'] ?? null
+            ];
+
+            // Get farmers with pagination
+            $farmers = $this->userModel->getAllFarmers($filters, $limit, $offset);
+            $totalRecords = $this->userModel->getTotalFarmersCount($filters);
+            $totalPages = ceil($totalRecords / $limit);
+
+            // Calculate pagination details
+            $startRecord = $offset + 1;
+            $endRecord = min($offset + $limit, $totalRecords);
+
+            $this->render('admin/farmers', [
+                'pageTitle' => 'Manage Farmers - AgriKonnect Admin',
+                'farmers' => $farmers,
+                'currentPage' => $page,
+                'totalPages' => $totalPages,
+                'totalRecords' => $totalRecords,
+                'startRecord' => $startRecord,
+                'endRecord' => $endRecord,
+                'filters' => $filters
+            ]);
         } catch (Exception $e) {
-            $this->logger->error("Farmer management error: " . $e->getMessage());
-            $this->setFlashMessage('Failed to load farmer management', 'error');
-            $this->redirect('/admin/farmers');
+            $this->logger->error("Error loading farmers: " . $e->getMessage());
+            $this->setFlashMessage('Error loading farmer management page', 'error');
+            $this->redirect('/admin/dashboard');
         }
     }
+
     public function manageCustomers(): void
     {
         try {
@@ -220,26 +250,38 @@ class AdminController extends BaseController
     public function systemHealth(): void
     {
         try {
-            // $this->validateAuthenticatedRequest();
-            // $this->validateAdminRole();
-
-            $health = [
+            $healthMetrics = [
                 'database' => $this->systemHealth->checkDatabaseHealth(),
                 'storage' => $this->systemHealth->checkStorageHealth(),
                 'services' => $this->systemHealth->checkServicesHealth(),
                 'queue' => $this->systemHealth->checkQueueHealth()
             ];
 
-            $this->jsonResponse([
-                'success' => true,
-                'health' => $health
+            $systemMetrics = [
+                'memory' => [
+                    'used' => memory_get_usage(true),
+                    'total' => ini_get('memory_limit'),
+                    'percentage' => (memory_get_usage(true) / ini_get('memory_limit')) * 100
+                ],
+                'storage' => [
+                    'used' => disk_free_space('/'),
+                    'total' => disk_total_space('/'),
+                    'percentage' => (disk_free_space('/') / disk_total_space('/')) * 100
+                ]
+            ];
+
+            $recentLogs = $this->systemHealth->getRecentLogs(20);
+
+            $this->render('admin/system', [
+                'pageTitle' => 'System Health - AgriKonnect Admin',
+                'healthMetrics' => $healthMetrics,
+                'systemMetrics' => $systemMetrics,
+                'recentLogs' => $recentLogs
             ]);
         } catch (Exception $e) {
             $this->logger->error("System health check error: " . $e->getMessage());
-            $this->jsonResponse([
-                'success' => false,
-                'message' => 'Failed to check system health'
-            ], 500);
+            $this->setFlashMessage('Failed to check system health', 'error');
+            $this->redirect('/admin/dashboard');
         }
     }
 
@@ -407,6 +449,147 @@ class AdminController extends BaseController
         if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
             $this->logger->warning('Unauthorized access attempt to admin area');
             throw new Exception('Unauthorized access to admin area', 403);
+        }
+    }
+
+    public function approveFarmer(): void
+    {
+        try {
+            $input = $this->validateInput([
+                'farmer_id' => 'int'
+            ]);
+
+            $result = $this->userModel->updateFarmerStatus(
+                $input['farmer_id'],
+                'active',
+                $_SESSION['user_id']
+            );
+
+            if ($result) {
+                $this->setFlashMessage('Farmer approved successfully', 'success');
+            } else {
+                $this->setFlashMessage('Failed to approve farmer', 'error');
+            }
+
+            $this->redirect('/admin/farmers');
+        } catch (Exception $e) {
+            $this->logger->error("Error approving farmer: " . $e->getMessage());
+            $this->setFlashMessage('An error occurred while approving farmer', 'error');
+            $this->redirect('/admin/farmers');
+        }
+    }
+
+    public function rejectFarmer(): void
+    {
+        try {
+            $input = $this->validateInput([
+                'farmer_id' => 'int',
+                'reason' => 'string'
+            ]);
+
+            $result = $this->userModel->updateFarmerStatus(
+                $input['farmer_id'],
+                'rejected',
+                $_SESSION['user_id'],
+                $input['reason']
+            );
+
+            if ($result) {
+                $this->setFlashMessage('Farmer application rejected', 'success');
+            } else {
+                $this->setFlashMessage('Failed to reject farmer application', 'error');
+            }
+
+            $this->redirect('/admin/farmers');
+        } catch (Exception $e) {
+            $this->logger->error("Error rejecting farmer: " . $e->getMessage());
+            $this->setFlashMessage('An error occurred while rejecting farmer', 'error');
+            $this->redirect('/admin/farmers');
+        }
+    }
+
+    public function suspendFarmer(): void
+    {
+        try {
+            $input = $this->validateInput([
+                'farmer_id' => 'int',
+                'reason' => 'string',
+                'duration' => 'string'
+            ]);
+
+            $result = $this->userModel->updateFarmerStatus(
+                $input['farmer_id'],
+                'suspended',
+                $_SESSION['user_id'],
+                $input['reason']
+            );
+
+            // Store suspension details
+            if ($result) {
+                $this->userModel->storeSuspensionDetails(
+                    $input['farmer_id'],
+                    $input['duration'],
+                    $input['reason'],
+                    $_SESSION['user_id']
+                );
+                $this->setFlashMessage('Farmer account suspended successfully', 'success');
+            } else {
+                $this->setFlashMessage('Failed to suspend farmer account', 'error');
+            }
+
+            $this->redirect('/admin/farmers');
+        } catch (Exception $e) {
+            $this->logger->error("Error suspending farmer: " . $e->getMessage());
+            $this->setFlashMessage('An error occurred while suspending the farmer', 'error');
+            $this->redirect('/admin/farmers');
+        }
+    }
+
+    public function viewFarmer(int $id): void
+    {
+        try {
+            $farmer = $this->userModel->getFarmerDetails($id);
+
+            if (!$farmer) {
+                $this->setFlashMessage('Farmer not found', 'error');
+                $this->redirect('/admin/farmers');
+                return;
+            }
+
+            $this->render('admin/farmer-details', [
+                'farmer' => $farmer,
+                'pageTitle' => 'Farmer Details - ' . $farmer['name']
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error("Error viewing farmer: " . $e->getMessage());
+            $this->setFlashMessage('Error loading farmer details', 'error');
+            $this->redirect('/admin/farmers');
+        }
+    }
+
+    public function getFarmerDetails(int $id): void
+    {
+        try {
+            $farmer = $this->userModel->getFarmerDetails($id);
+
+            if (!$farmer) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Farmer not found'
+                ], 404);
+                return;
+            }
+
+            $this->jsonResponse([
+                'success' => true,
+                'data' => $farmer
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error("Error getting farmer details: " . $e->getMessage());
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Error loading farmer details'
+            ], 500);
         }
     }
 }
