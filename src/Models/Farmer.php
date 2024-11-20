@@ -221,4 +221,30 @@ class Farmer
             return null;
         }
     }
+
+    public function viewFarmer(int $id): void
+    {
+        try {
+            $farmer = $this->userModel->getFarmerDetails($id);
+
+            if (!$farmer) {
+                $this->setFlashMessage('Farmer not found', 'error');
+                $this->redirect('/admin/farmers');
+                return;
+            }
+
+            // Get status history
+            $statusHistory = $this->userModel->getFarmerStatusHistory($id);
+
+            $this->render('admin/farmer-details', [
+                'farmer' => $farmer,
+                'statusHistory' => $statusHistory,
+                'pageTitle' => 'Farmer Details - ' . $farmer['name']
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error("Error viewing farmer: " . $e->getMessage());
+            $this->setFlashMessage('Error loading farmer details', 'error');
+            $this->redirect('/admin/farmers');
+        }
+    }
 }

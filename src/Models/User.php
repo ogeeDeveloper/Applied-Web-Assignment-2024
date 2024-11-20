@@ -159,11 +159,18 @@ class User
         try {
             $this->db->beginTransaction();
 
-            // First update the farmer_profiles status
+            // Debug log before update
+            $this->logger->info("Attempting to update farmer status", [
+                'farmer_id' => $farmerId,
+                'status' => $status,
+                'admin_id' => $adminId
+            ]);
+
+            // Update farmer status - Using farmer_id column
             $sql = "UPDATE farmer_profiles 
-                   SET status = :status,
-                       updated_at = CURRENT_TIMESTAMP 
-                   WHERE farmer_id = :farmer_id";
+               SET status = :status,
+                   updated_at = CURRENT_TIMESTAMP 
+               WHERE farmer_id = :farmer_id";  // Changed from id to farmer_id
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
@@ -171,35 +178,22 @@ class User
                 'farmer_id' => $farmerId
             ]);
 
-            // If suspending, create a suspension record
-            if ($status === 'suspended') {
-                $suspensionSql = "INSERT INTO farmer_suspensions (
-                    farmer_id,
-                    duration,
-                    reason,
-                    suspended_by,
-                    expires_at
-                ) VALUES (
-                    :farmer_id,
-                    :duration,
-                    :reason,
-                    :suspended_by,
-                    CASE 
-                        WHEN :duration = 'permanent' THEN NULL
-                        ELSE DATE_ADD(CURRENT_TIMESTAMP, INTERVAL :duration_days DAY)
-                    END
-                )";
+            // Log affected rows
+            $rowCount = $stmt->rowCount();
+            $this->logger->info("Update query affected rows", ['count' => $rowCount]);
 
-                $stmt = $this->db->prepare($suspensionSql);
-                $durationDays = $duration === 'permanent' ? null : (int)$duration;
+            if ($rowCount === 0) {
+                throw new \Exception("No farmer found with ID: {$farmerId}");
+            }
 
-                $stmt->execute([
-                    'farmer_id' => $farmerId,
-                    'duration' => $duration ?? 'permanent',
-                    'reason' => $reason,
-                    'suspended_by' => $adminId,
-                    'duration_days' => $durationDays
-                ]);
+            // Handle specific status actions
+            switch ($status) {
+                case 'suspended':
+                    $this->storeSuspensionDetails($farmerId, $duration ?? 'permanent', $reason ?? '', $adminId);
+                    break;
+                case 'rejected':
+                    $this->createRejectionRecord($farmerId, $adminId, $reason ?? 'No reason provided');
+                    break;
             }
 
             // Log the status change
@@ -217,7 +211,13 @@ class User
             return true;
         } catch (\PDOException $e) {
             $this->db->rollBack();
-            $this->logger->error("Error updating farmer status: " . $e->getMessage());
+            $this->logger->error("Error updating farmer status: " . $e->getMessage(), [
+                'query' => $sql,
+                'params' => [
+                    'status' => $status,
+                    'farmer_id' => $farmerId
+                ]
+            ]);
             return false;
         }
     }
@@ -263,14 +263,62 @@ class User
         }
     }
 
+    private function createRejectionRecord(int $farmerId, int $adminId, string $reason): void
+    {
+        $sql = "INSERT INTO farmer_rejections (
+                farmer_id,
+                reason,
+                rejected_by
+            ) VALUES (
+                :farmer_id,
+                :reason,
+                :rejected_by
+            )";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'farmer_id' => $farmerId,
+            'reason' => $reason,
+            'rejected_by' => $adminId
+        ]);
+    }
+
+    public function getRejectionDetails(int $farmerId): ?array
+    {
+        try {
+            $sql = "SELECT fr.*, u.name as rejected_by_name
+                FROM farmer_rejections fr
+                JOIN users u ON fr.rejected_by = u.id
+                WHERE fr.farmer_id = :farmer_id
+                ORDER BY fr.created_at DESC
+                LIMIT 1";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['farmer_id' => $farmerId]);
+
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting rejection details: " . $e->getMessage());
+            return null;
+        }
+    }
+
     private function logFarmerStatusChange(int $farmerId, string $status, int $adminId, ?string $reason = null): void
     {
         try {
             $sql = "INSERT INTO farmer_status_logs (
-                        farmer_id, status, changed_by, reason, created_at
-                    ) VALUES (
-                        :farmer_id, :status, :changed_by, :reason, CURRENT_TIMESTAMP
-                    )";
+                    farmer_id, 
+                    status, 
+                    changed_by, 
+                    reason, 
+                    created_at
+                ) VALUES (
+                    :farmer_id, 
+                    :status, 
+                    :changed_by, 
+                    :reason, 
+                    CURRENT_TIMESTAMP
+                )";
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
@@ -278,6 +326,12 @@ class User
                 'status' => $status,
                 'changed_by' => $adminId,
                 'reason' => $reason
+            ]);
+
+            $this->logger->info("Status change logged successfully", [
+                'farmer_id' => $farmerId,
+                'status' => $status,
+                'admin_id' => $adminId
             ]);
         } catch (\PDOException $e) {
             $this->logger->error("Error logging farmer status change: " . $e->getMessage());
@@ -660,7 +714,7 @@ class User
     public function getPendingFarmers(int $limit = 5): array
     {
         try {
-            $sql = "SELECT u.id, u.name, fp.farm_name, fp.farm_type, fp.location, fp.created_at
+            $sql = "SELECT fp.farmer_id as id, u.name, fp.farm_name, fp.farm_type, fp.location, fp.created_at
                 FROM users u
                 JOIN farmer_profiles fp ON u.id = fp.user_id
                 WHERE fp.status = 'pending'
@@ -718,29 +772,50 @@ class User
     {
         try {
             $sql = "INSERT INTO farmer_suspensions (
-                    farmer_id, duration, reason, suspended_by, suspended_at, expires_at
+                    farmer_id, 
+                    duration, 
+                    reason, 
+                    suspended_by, 
+                    suspended_at,
+                    expires_at
                 ) VALUES (
-                    :farmer_id, :duration, :reason, :suspended_by, NOW(),
+                    :farmer_id,
+                    :duration,
+                    :reason,
+                    :suspended_by,
+                    CURRENT_TIMESTAMP,
                     CASE 
                         WHEN :duration = 'permanent' THEN NULL
-                        ELSE DATE_ADD(NOW(), INTERVAL :duration_days DAY)
+                        ELSE DATE_ADD(CURRENT_TIMESTAMP, INTERVAL :duration_days DAY)
                     END
                 )";
 
+            $stmt = $this->db->prepare($sql);
+
             $durationDays = $duration === 'permanent' ? null : (int)$duration;
 
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([
+            $params = [
                 'farmer_id' => $farmerId,
                 'duration' => $duration,
-                'duration_days' => $durationDays,
                 'reason' => $reason,
-                'suspended_by' => $adminId
+                'suspended_by' => $adminId,
+                'duration_days' => $durationDays
+            ];
+
+            $stmt->execute($params);
+
+            $this->logger->info("Suspension details stored successfully", [
+                'farmer_id' => $farmerId,
+                'duration' => $duration,
+                'admin_id' => $adminId
             ]);
 
             return true;
         } catch (\PDOException $e) {
-            $this->logger->error("Error storing suspension details: " . $e->getMessage());
+            $this->logger->error("Error storing suspension details: " . $e->getMessage(), [
+                'query' => $sql,
+                'params' => $params ?? []
+            ]);
             return false;
         }
     }

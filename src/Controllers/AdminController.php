@@ -477,13 +477,11 @@ class AdminController extends BaseController
                 $this->setFlashMessage('Failed to approve farmer', 'error');
             }
 
-            // Redirect back to the previous page or farmers list
-            $redirect = $_SERVER['HTTP_REFERER'] ?? '/admin/farmers';
-            $this->redirect($redirect);
+            $this->redirect('/admin/dashboard');
         } catch (Exception $e) {
             $this->logger->error("Error approving farmer: " . $e->getMessage());
             $this->setFlashMessage('An error occurred while approving farmer', 'error');
-            $this->redirect('/admin/farmers');
+            $this->redirect('/admin/dashboard');
         }
     }
 
