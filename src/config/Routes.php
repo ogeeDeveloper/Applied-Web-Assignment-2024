@@ -13,10 +13,15 @@ return [
         'GET /register' => ['AuthController', 'customerRegistrationForm'],
         'POST /register' => ['AuthController', 'register'],
         'POST /logout' => ['AuthController', 'logout'],
-    ],
-    'admin' => [
+        // Add admin auth routes here
         'GET /admin/login' => ['AdminAuthController', 'showLoginForm'],
         'POST /admin/login' => ['AdminAuthController', 'login'],
+        'GET /admin/forgot-password' => ['AdminAuthController', 'showForgotPasswordForm'],
+        'POST /admin/forgot-password' => ['AdminAuthController', 'forgotPassword'],
+        'POST /admin/logout' => ['AdminAuthController', 'logout'],
+    ],
+    'admin' => [
+        // Only protected admin routes
         'GET /admin/dashboard' => ['AdminController', 'dashboard'],
         'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
     ],

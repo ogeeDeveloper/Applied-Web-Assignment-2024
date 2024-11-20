@@ -1,14 +1,17 @@
 <?php
+
 namespace App\Models;
 
 use PDO;
 
-class Order {
+class Order
+{
     private PDO $db;
     private $logger;
     private OrderStatusManager $statusManager;
 
-    public function __construct(PDO $db, $logger) {
+    public function __construct(PDO $db, $logger)
+    {
         $this->db = $db;
         $this->logger = $logger;
         $this->statusManager = new OrderStatusManager($db, $logger);
@@ -23,7 +26,8 @@ class Order {
      *
      * @throws \Exception If the order creation fails.
      */
-    public function create(array $data): array {
+    public function create(array $data): array
+    {
         try {
             $this->db->beginTransaction();
 
@@ -59,9 +63,9 @@ class Order {
 
             // Initialize order status tracking
             $this->statusManager->updateOrderStatus(
-                $orderId, 
-                'pending', 
-                $data['customer_id'], 
+                $orderId,
+                'pending',
+                $data['customer_id'],
                 'Order created'
             );
 
@@ -90,7 +94,8 @@ class Order {
      *
      * @throws Exception If the status update fails.
      */
-    public function updateStatus(int $orderId, string $newStatus, int $userId, ?string $notes = null): array {
+    public function updateStatus(int $orderId, string $newStatus, int $userId, ?string $notes = null): array
+    {
         return $this->statusManager->updateOrderStatus($orderId, $newStatus, $userId, $notes);
     }
 
@@ -104,7 +109,8 @@ class Order {
      *
      * @throws Exception If the order timeline retrieval fails.
      */
-    public function getOrderTimeline(int $orderId): array {
+    public function getOrderTimeline(int $orderId): array
+    {
         return $this->statusManager->getOrderTimeline($orderId);
     }
 
@@ -123,15 +129,17 @@ class Order {
      *
      * @throws Exception If there is an error retrieving the delivery metrics.
      */
-    public function getDeliveryMetrics(): array {
+    public function getDeliveryMetrics(): array
+    {
         return $this->statusManager->getDeliveryMetrics();
     }
 
-    private function updateProductStock(int $productId, int $quantity): void {
+    private function updateProductStock(int $productId, int $quantity): void
+    {
         $sql = "UPDATE products 
                 SET stock_quantity = stock_quantity - :quantity 
                 WHERE product_id = :product_id";
-        
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'product_id' => $productId,
@@ -150,7 +158,8 @@ class Order {
      *
      * @throws PDOException If there is an error executing the database query.
      */
-    private function createOrderItem(int $orderId, array $item): void {
+    private function createOrderItem(int $orderId, array $item): void
+    {
         $sql = "INSERT INTO order_items (
             order_id, product_id, quantity, unit_price, total_price
         ) VALUES (
@@ -182,7 +191,8 @@ class Order {
      *
      * @throws PDOException If there is an error executing the database query.
      */
-    public function getRecentOrdersByCustomer(int $customerId, int $limit = 5): array {
+    public function getRecentOrdersByCustomer(int $customerId, int $limit = 5): array
+    {
         try {
             $sql = "SELECT o.*, oi.*, p.name as product_name, f.farm_name
                     FROM orders o
@@ -219,7 +229,8 @@ class Order {
      *
      * @throws PDOException If there is an error executing the database query.
      */
-    public function getPendingOrdersByFarmer(int $farmerId): array {
+    public function getPendingOrdersByFarmer(int $farmerId): array
+    {
         try {
             $sql = "SELECT o.*, oi.*, p.name as product_name, c.name as customer_name
                     FROM orders o
@@ -261,7 +272,8 @@ class Order {
      *
      * @throws PDOException If there is an error executing the database query.
      */
-    public function getActiveOrdersByCustomer(int $customerId): array {
+    public function getActiveOrdersByCustomer(int $customerId): array
+    {
         try {
             $sql = "SELECT o.*, oi.*, p.name as product_name, f.farm_name, f.name as farmer_name
                     FROM orders o
@@ -316,7 +328,8 @@ class Order {
      * @return float The total price of orders placed by the farmer in the current month.
      * @throws PDOException If there is an error executing the database query.
      */
-    public function getMonthlyTotal($farmerId = null): float {
+    public function getMonthlyTotal($farmerId = null): float
+    {
         try {
             $sql = "SELECT COALESCE(SUM(total_price), 0) as total 
                     FROM orders 
@@ -349,7 +362,8 @@ class Order {
      * @return int The total number of orders placed by the farmer in the current month.
      * @throws PDOException If there is an error executing the database query.
      */
-    public function getMonthlyOrderCount($farmerId = null): int {
+    public function getMonthlyOrderCount($farmerId = null): int
+    {
         try {
             $sql = "SELECT COUNT(*) 
                     FROM orders 
@@ -374,7 +388,8 @@ class Order {
     }
 
 
-    public function getOrderStats(): array {
+    public function getOrderStats(): array
+    {
         try {
             return [
                 'daily' => $this->getDailyStats(),
@@ -400,7 +415,8 @@ class Order {
      *
      * @throws PDOException If there is an error executing the database query.
      */
-    public function getRecentOrders(int $limit = 10): array {
+    public function getRecentOrders(int $limit = 10): array
+    {
         try {
             $sql = "SELECT 
                         o.*,
@@ -440,7 +456,8 @@ class Order {
      *
      * @throws PDOException If there is an error executing the database query.
      */
-    public function getRecentOrdersByFarmer(int $farmerId, int $limit = 5): array {
+    public function getRecentOrdersByFarmer(int $farmerId, int $limit = 5): array
+    {
         try {
             $sql = "SELECT 
                         o.*,
@@ -468,56 +485,61 @@ class Order {
     }
 
 
-    private function getDailyStats(): array {
+    private function getDailyStats(): array
+    {
         $sql = "SELECT 
                     COUNT(*) as count,
-                    SUM(total_price) as total,
-                    AVG(total_price) as average
+                    SUM(total_amount) as total,
+                    AVG(total_amount) as average
                 FROM orders
                 WHERE DATE(ordered_date) = CURRENT_DATE";
-        
+
         return $this->executeStatsQuery($sql);
     }
 
-    private function getWeeklyStats(): array {
+    private function getWeeklyStats(): array
+    {
         $sql = "SELECT 
                     COUNT(*) as count,
-                    SUM(total_price) as total,
-                    AVG(total_price) as average
+                    SUM(total_amount) as total,
+                    AVG(total_amount) as average
                 FROM orders
                 WHERE ordered_date >= DATE_SUB(CURRENT_DATE, INTERVAL 7 DAY)";
-        
+
         return $this->executeStatsQuery($sql);
     }
 
-    private function getMonthlyStats(): array {
+    private function getMonthlyStats(): array
+    {
         $sql = "SELECT 
                     COUNT(*) as count,
-                    SUM(total_price) as total,
-                    AVG(total_price) as average
+                    SUM(total_amount) as total,
+                    AVG(total_amount) as average
                 FROM orders
                 WHERE MONTH(ordered_date) = MONTH(CURRENT_DATE)
                 AND YEAR(ordered_date) = YEAR(CURRENT_DATE)";
-        
+
         return $this->executeStatsQuery($sql);
     }
 
-    private function getYearlyStats(): array {
+    private function getYearlyStats(): array
+    {
         $sql = "SELECT 
                     COUNT(*) as count,
-                    SUM(total_price) as total,
-                    AVG(total_price) as average
+                    SUM(total_amount) as total,
+                    AVG(total_amount) as average
                 FROM orders
                 WHERE YEAR(ordered_date) = YEAR(CURRENT_DATE)";
-        
+
         return $this->executeStatsQuery($sql);
     }
-    
-    private function executeStatsQuery(string $sql): array {
+
+    private function executeStatsQuery(string $sql): array
+    {
         try {
             $stmt = $this->db->query($sql);
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             return [
                 'count' => (int)$result['count'],
                 'total' => (float)$result['total'],
@@ -533,7 +555,8 @@ class Order {
         }
     }
 
-    public function getCustomerOrderCount(int $customerId): int {
+    public function getCustomerOrderCount(int $customerId): int
+    {
         try {
             $sql = "SELECT COUNT(*) FROM orders WHERE customer_trn = :customer_id";
             $stmt = $this->db->prepare($sql);
@@ -545,7 +568,8 @@ class Order {
         }
     }
 
-    public function getActiveOrdersCount(int $customerId): int {
+    public function getActiveOrdersCount(int $customerId): int
+    {
         try {
             $sql = "SELECT COUNT(*) 
                     FROM orders 
@@ -560,7 +584,8 @@ class Order {
         }
     }
 
-    public function getAllOrders(array $filters = [], int $limit = null, int $offset = null): array {
+    public function getAllOrders(array $filters = [], int $limit = null, int $offset = null): array
+    {
         try {
             $conditions = [];
             $params = [];
@@ -617,7 +642,7 @@ class Order {
             }
 
             $stmt = $this->db->prepare($sql);
-            
+
             foreach ($params as $key => $value) {
                 $stmt->bindValue($key, $value);
             }
@@ -637,7 +662,8 @@ class Order {
         }
     }
 
-    public function getCustomerOrders(int $customerId, int $page = 1, int $limit = 10): array {
+    public function getCustomerOrders(int $customerId, int $page = 1, int $limit = 10): array
+    {
         try {
             // Calculate offset for pagination
             $offset = ($page - 1) * $limit;
@@ -646,7 +672,7 @@ class Order {
             $countSql = "SELECT COUNT(*) 
                         FROM orders 
                         WHERE customer_id = :customer_id";
-            
+
             $stmt = $this->db->prepare($countSql);
             $stmt->execute(['customer_id' => $customerId]);
             $total = $stmt->fetchColumn();
@@ -746,7 +772,8 @@ class Order {
         }
     }
 
-    public function getCustomerOrderDetails(int $orderId, int $customerId): ?array {
+    public function getCustomerOrderDetails(int $orderId, int $customerId): ?array
+    {
         try {
             // First verify this order belongs to the customer
             $sql = "SELECT o.*,

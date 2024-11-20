@@ -31,20 +31,20 @@ class RoleMiddleware
         return function () use ($requiredRole) {
             SessionManager::validateActivity();
 
-            if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $requiredRole) {
+            if (!SessionManager::hasRole($requiredRole)) {
                 $this->logger->warning("Unauthorized access attempt", [
                     'required_role' => $requiredRole,
                     'current_role' => $_SESSION['user_role'] ?? 'none',
                     'uri' => $_SERVER['REQUEST_URI']
                 ]);
 
-                // If not logged in at all, show 401
-                if (!isset($_SESSION['user_role'])) {
-                    showErrorPage(401, $this->logger);
-                }
-                // If logged in but wrong role, show 403
-                else {
-                    showErrorPage(403, $this->logger);
+                $loginUrl = $this->getLoginUrlForRole($requiredRole);
+                $currentUrl = urlencode($_SERVER['REQUEST_URI']);
+
+                // Prevent redirect loops
+                if ($_SERVER['REQUEST_URI'] !== $loginUrl) {
+                    header("Location: {$loginUrl}?redirect={$currentUrl}");
+                    exit;
                 }
             }
 

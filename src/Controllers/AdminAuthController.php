@@ -26,7 +26,12 @@ class AdminAuthController extends BaseController
      */
     public function showLoginForm(): void
     {
-        // If already authenticated as admin, redirect to dashboard
+        // Clear any existing flash messages
+        if (isset($_SESSION['flash'])) {
+            unset($_SESSION['flash']);
+        }
+
+        // If already authenticated as admin and trying to access login page, redirect to dashboard
         if ($this->isAdminAuthenticated()) {
             $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
             if ($currentPath === '/admin/login') {
@@ -35,15 +40,10 @@ class AdminAuthController extends BaseController
             }
         }
 
-        // Clear any existing session if on login page
-        if (!$this->isAdminAuthenticated()) {
-            SessionManager::destroy();
-            SessionManager::initialize();
-        }
-
+        // Show login form
         $this->render('admin/login', [
             'pageTitle' => 'Admin Login - AgriKonnect'
-        ], $this->adminLayout);
+        ], 'layouts/auth'); // Use a simple layout for auth pages
     }
 
     /**
@@ -57,12 +57,19 @@ class AdminAuthController extends BaseController
                 return;
             }
 
+            // Validate input
             $input = $this->validateInput([
                 'email' => 'email',
                 'password' => 'string'
             ]);
 
             $user = $this->userModel->findByEmail($input['email']);
+
+            // Log authentication attempt
+            $this->logger->info('Admin login attempt', [
+                'email' => $input['email'],
+                'ip' => $_SERVER['REMOTE_ADDR']
+            ]);
 
             if (!$user || !password_verify($input['password'], $user['password'])) {
                 $this->setFlashMessage('Invalid credentials', 'error');
@@ -90,6 +97,10 @@ class AdminAuthController extends BaseController
             $_SESSION['admin_id'] = $user['id'];
             $_SESSION['last_activity'] = time();
 
+            // Update last login timestamp
+            $this->userModel->updateLastLogin($user['id']);
+
+            // Log successful login
             $this->logger->info('Admin login successful', [
                 'user_id' => $user['id'],
                 'email' => $user['email']
@@ -109,6 +120,10 @@ class AdminAuthController extends BaseController
      */
     public function logout(): void
     {
+        if (isset($_SESSION['user_id'])) {
+            $this->logger->info('Admin logout', ['user_id' => $_SESSION['user_id']]);
+        }
+
         SessionManager::destroy();
         $this->redirect('/admin/login', 'You have been logged out successfully', 'success');
     }
@@ -205,7 +220,8 @@ class AdminAuthController extends BaseController
      */
     private function isAdminAuthenticated(): bool
     {
-        return isset($_SESSION['user_role']) &&
+        return isset($_SESSION['user_id']) &&
+            isset($_SESSION['user_role']) &&
             $_SESSION['user_role'] === Roles::ADMIN &&
             isset($_SESSION['is_authenticated']) &&
             $_SESSION['is_authenticated'] === true &&

@@ -142,20 +142,37 @@ try {
                 [$controllerName, $methodName] = $groupRoutes[$route];
                 $controllerClass = "App\\Controllers\\$controllerName";
 
-                // Apply middleware for protected routes
-                if ($group !== 'public' && $group !== 'auth') {
-                    // Initialize session if not already started
-                    SessionManager::initialize();
+                // Skip middleware for public and auth routes
+                if (
+                    $group === 'public' || $group === 'auth' ||
+                    ($group === 'admin' && in_array($route, [
+                        'GET /admin/login',
+                        'POST /admin/login',
+                        'GET /admin/forgot-password',
+                        'POST /admin/forgot-password'
+                    ]))
+                ) {
+                    $controller = new $controllerClass($db, $logger);
+                    $controller->$methodName();
+                    $routeHandled = true;
+                    break;
+                }
 
-                    // Check authentication
-                    if (
-                        !isset($_SESSION['user_id']) ||
-                        !isset($_SESSION['user_role']) ||
-                        !isset($_SESSION['is_authenticated']) ||
-                        $_SESSION['is_authenticated'] !== true
-                    ) {
+                // Handle protected routes
+                SessionManager::initialize();
 
-                        $loginUrl = getLoginUrlForRole($group);
+                // Check if user is authenticated
+                if (
+                    !isset($_SESSION['user_id']) ||
+                    !isset($_SESSION['user_role']) ||
+                    !isset($_SESSION['is_authenticated']) ||
+                    $_SESSION['is_authenticated'] !== true
+                ) {
+
+                    $loginUrl = getLoginUrlForRole($group);
+
+                    // Prevent redirect loops for login pages
+                    if ($request_uri !== $loginUrl) {
                         $logger->info("Redirecting unauthenticated user", [
                             'from' => $request_uri,
                             'to' => $loginUrl
@@ -164,14 +181,14 @@ try {
                         header("Location: $loginUrl?redirect=" . urlencode($request_uri));
                         exit;
                     }
-
-                    // Role middleware check
-                    if (!$roleMiddleware->handle($group)()) {
-                        showErrorPage(403, $logger);
-                    }
                 }
 
-                // Instantiate and execute controller
+                // Check role authorization
+                if (!$roleMiddleware->handle($group)()) {
+                    showErrorPage(403, $logger);
+                }
+
+                // Execute controller
                 $controller = new $controllerClass($db, $logger);
                 $controller->$methodName();
                 $routeHandled = true;

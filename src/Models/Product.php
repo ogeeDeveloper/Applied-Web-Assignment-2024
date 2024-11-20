@@ -1,14 +1,17 @@
 <?php
+
 namespace App\Models;
 
 use PDO;
 
-class Product {
+class Product
+{
     private PDO $db;
     private $logger;
     private MediaManager $mediaManager;
 
-    public function __construct(PDO $db, $logger) {
+    public function __construct(PDO $db, $logger)
+    {
         $this->db = $db;
         $this->logger = $logger;
         $this->mediaManager = new MediaManager($db, $logger);
@@ -28,7 +31,8 @@ class Product {
      *
      * @throws \Exception If an error occurs during the file upload process.
      */
-    public function create(array $data, array $files = null): array {
+    public function create(array $data, array $files = null): array
+    {
         try {
             $this->db->beginTransaction();
 
@@ -87,7 +91,8 @@ class Product {
         }
     }
 
-    public function getProductWithMedia(int $productId): ?array {
+    public function getProductWithMedia(int $productId): ?array
+    {
         try {
             // Get product details
             $sql = "SELECT p.*, f.farm_name, f.name as farmer_name 
@@ -105,7 +110,7 @@ class Product {
 
             // Get product images
             $product['media'] = $this->mediaManager->getEntityFiles('product', $productId);
-            
+
             return $product;
         } catch (\Exception $e) {
             $this->logger->error("Error getting product with media: " . $e->getMessage());
@@ -113,7 +118,8 @@ class Product {
         }
     }
 
-    public function updateProductMedia(int $productId, array $files): array {
+    public function updateProductMedia(int $productId, array $files): array
+    {
         try {
             $uploadedFiles = [];
             foreach ($files['images'] as $image) {
@@ -136,7 +142,8 @@ class Product {
         }
     }
 
-    public function setPrimaryImage(int $productId, int $fileId): array {
+    public function setPrimaryImage(int $productId, int $fileId): array
+    {
         try {
             $result = $this->mediaManager->setPrimaryFile($fileId, 'product', $productId);
             return [
@@ -152,16 +159,17 @@ class Product {
         }
     }
 
-    public function getActiveFarmerProducts(int $farmerId): array {
+    public function getActiveFarmerProducts(int $farmerId): array
+    {
         try {
             $sql = "SELECT * FROM products 
                     WHERE farmer_trn = :farmer_id 
                     AND availability = TRUE 
                     ORDER BY created_at DESC";
-            
+
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['farmer_id' => $farmerId]);
-            
+
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             $this->logger->error("Error getting farmer products: " . $e->getMessage());
@@ -169,19 +177,20 @@ class Product {
         }
     }
 
-    public function getLowStockProducts(int $farmerId, int $threshold = 10): array {
+    public function getLowStockProducts(int $farmerId, int $threshold = 10): array
+    {
         try {
             $sql = "SELECT * FROM products 
                     WHERE farmer_trn = :farmer_id 
                     AND stock_quantity <= :threshold
                     AND availability = TRUE";
-            
+
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 'farmer_id' => $farmerId,
                 'threshold' => $threshold
             ]);
-            
+
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             $this->logger->error("Error getting low stock products: " . $e->getMessage());
@@ -189,11 +198,12 @@ class Product {
         }
     }
 
-    public function getProducts(int $page = 1, int $limit = 10, ?string $category = null, string $status = 'available'): array {
+    public function getProducts(int $page = 1, int $limit = 10, ?string $category = null, string $status = 'available'): array
+    {
         try {
             $offset = ($page - 1) * $limit;
             $params = ['status' => $status];
-            
+
             $sql = "SELECT p.*, f.name as farmer_name, f.farm_name 
                     FROM products p 
                     JOIN farmers f ON p.farmer_trn = f.farmer_trn 
@@ -205,14 +215,14 @@ class Product {
             }
 
             $sql .= " ORDER BY p.created_at DESC LIMIT :limit OFFSET :offset";
-            
+
             $stmt = $this->db->prepare($sql);
             foreach ($params as $key => $value) {
                 $stmt->bindValue($key, $value);
             }
             $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
             $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
-            
+
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
@@ -221,7 +231,8 @@ class Product {
         }
     }
 
-    public function getTotalProducts(?string $category = null, string $status = 'available'): int {
+    public function getTotalProducts(?string $category = null, string $status = 'available'): int
+    {
         try {
             $sql = "SELECT COUNT(*) FROM products WHERE status = :status";
             $params = ['status' => $status];
@@ -233,7 +244,7 @@ class Product {
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
-            
+
             return (int) $stmt->fetchColumn();
         } catch (\PDOException $e) {
             $this->logger->error("Error getting total products: " . $e->getMessage());
@@ -241,7 +252,8 @@ class Product {
         }
     }
 
-    public function getSavedProducts(int $customerId): array {
+    public function getSavedProducts(int $customerId): array
+    {
         try {
             $sql = "SELECT p.*, f.farm_name, f.name as farmer_name, sp.saved_at
                     FROM saved_products sp
@@ -261,7 +273,8 @@ class Product {
         }
     }
 
-    public function getRecommendedProducts(int $customerId): array {
+    public function getRecommendedProducts(int $customerId): array
+    {
         try {
             // Get products based on customer's previous orders and preferences
             $sql = "WITH CustomerCategories AS (
@@ -307,7 +320,8 @@ class Product {
         }
     }
 
-    public function saveProduct(int $customerId, int $productId): bool {
+    public function saveProduct(int $customerId, int $productId): bool
+    {
         try {
             $sql = "INSERT INTO saved_products (customer_trn, product_id, saved_at)
                     VALUES (:customer_id, :product_id, CURRENT_TIMESTAMP)
@@ -325,7 +339,8 @@ class Product {
     }
 
     // Add this method to remove a saved product
-    public function removeSavedProduct(int $customerId, int $productId): bool {
+    public function removeSavedProduct(int $customerId, int $productId): bool
+    {
         try {
             $sql = "DELETE FROM saved_products 
                     WHERE customer_trn = :customer_id 
@@ -342,7 +357,8 @@ class Product {
         }
     }
 
-    public function getMonthlyTopProducts(int $farmerId): array {
+    public function getMonthlyTopProducts(int $farmerId): array
+    {
         try {
             $sql = "SELECT 
                         p.product_id,
@@ -362,7 +378,7 @@ class Product {
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['farmer_id' => $farmerId]);
-            
+
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             $this->logger->error("Error getting monthly top products: " . $e->getMessage());
@@ -370,7 +386,8 @@ class Product {
         }
     }
 
-    public function getTopProducts(int $limit = 10): array {
+    public function getTopProducts(int $limit = 10): array
+    {
         try {
             $sql = "SELECT 
                         p.product_id,
@@ -381,7 +398,7 @@ class Product {
                         SUM(oi.quantity) as total_quantity,
                         SUM(oi.total_price) as total_revenue
                     FROM products p
-                    JOIN farmers f ON p.farmer_trn = f.farmer_trn
+                    JOIN farmer_profiles f ON p.farmer_id = f.farmer_id
                     JOIN order_items oi ON p.product_id = oi.product_id
                     JOIN orders o ON oi.order_id = o.order_id
                     WHERE o.ordered_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
@@ -392,15 +409,16 @@ class Product {
             $stmt = $this->db->prepare($sql);
             $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
             $stmt->execute();
-            
+
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
             $this->logger->error("Error getting top products: " . $e->getMessage());
             return [];
         }
-    } 
+    }
 
-    public function getSavedProductsCount(int $customerId): int {
+    public function getSavedProductsCount(int $customerId): int
+    {
         try {
             $sql = "SELECT COUNT(*) 
                     FROM saved_products 
@@ -408,7 +426,7 @@ class Product {
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute(['customer_id' => $customerId]);
-            
+
             return (int)$stmt->fetchColumn();
         } catch (\PDOException $e) {
             $this->logger->error("Error getting saved products count: " . $e->getMessage());
@@ -417,7 +435,8 @@ class Product {
     }
 
     // Additional helper method to check if a product is saved
-    public function isProductSaved(int $customerId, int $productId): bool {
+    public function isProductSaved(int $customerId, int $productId): bool
+    {
         try {
             $sql = "SELECT COUNT(*) 
                     FROM saved_products 
@@ -429,7 +448,7 @@ class Product {
                 'customer_id' => $customerId,
                 'product_id' => $productId
             ]);
-            
+
             return (bool)$stmt->fetchColumn();
         } catch (\PDOException $e) {
             $this->logger->error("Error checking saved product: " . $e->getMessage());
@@ -437,7 +456,8 @@ class Product {
         }
     }
 
-    public function getAllProducts(array $filters = [], int $limit = null, int $offset = null): array {
+    public function getAllProducts(array $filters = [], int $limit = null, int $offset = null): array
+    {
         try {
             $conditions = [];
             $params = [];
@@ -491,7 +511,7 @@ class Product {
             }
 
             $stmt = $this->db->prepare($sql);
-            
+
             foreach ($params as $key => $value) {
                 $stmt->bindValue($key, $value);
             }

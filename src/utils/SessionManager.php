@@ -7,6 +7,7 @@ class SessionManager
     public static function initialize(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            // Set secure session parameters
             ini_set('session.cookie_httponly', 1);
             ini_set('session.use_only_cookies', 1);
             ini_set('session.use_strict_mode', 1);
@@ -29,9 +30,16 @@ class SessionManager
         if (
             !isset($_SESSION['last_activity']) ||
             (time() - $_SESSION['last_activity'] > 7200)
-        ) {
+        ) { // 2 hours timeout
             self::destroy();
-            header('Location: /login');
+
+            // Get current URL path
+            $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+            // Determine correct login page based on path
+            $loginUrl = str_starts_with($currentPath, '/admin') ? '/admin/login' : '/login';
+
+            header("Location: $loginUrl");
             exit;
         }
 
@@ -47,7 +55,7 @@ class SessionManager
     public static function destroy(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
-            // Unset all session variables
+            // Clear all session variables
             $_SESSION = array();
 
             // Destroy the session cookie
@@ -66,10 +74,14 @@ class SessionManager
      */
     public static function isAuthenticated(): bool
     {
-        self::initialize();
         return isset($_SESSION['user_id']) &&
             isset($_SESSION['user_role']) &&
             isset($_SESSION['is_authenticated']) &&
             $_SESSION['is_authenticated'] === true;
+    }
+
+    public static function hasRole(string $role): bool
+    {
+        return self::isAuthenticated() && $_SESSION['user_role'] === $role;
     }
 }
