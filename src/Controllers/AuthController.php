@@ -208,6 +208,15 @@ class AuthController extends BaseController
         }
     }
 
+    public function farmerLoginForm()
+    {
+        if ($this->isAuthenticated()) {
+            header('Location: ' . $this->getRedirectUrl());
+            exit;
+        }
+        $this->render('auth/farmer-login', [], 'Farmer Login - AgriKonnect');
+    }
+
     public function registerFarmerProfile(int $userId, array $data): void
     {
         $farmerData = [

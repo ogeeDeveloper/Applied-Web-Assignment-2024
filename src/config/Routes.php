@@ -8,11 +8,19 @@ return [
         'GET /contact' => ['HomeController', 'contact'],
     ],
     'auth' => [
+        // Customer auth routes
         'GET /login' => ['AuthController', 'loginForm'],
         'POST /login' => ['AuthController', 'login'],
         'GET /register' => ['AuthController', 'customerRegistrationForm'],
         'POST /register' => ['AuthController', 'register'],
         'POST /logout' => ['AuthController', 'logout'],
+
+        // Farmer auth routes
+        'GET /register/farmer' => ['AuthController', 'farmerRegistrationForm'],
+        'POST /register/farmer' => ['AuthController', 'register'],
+        'GET /farmer/login' => ['AuthController', 'farmerLoginForm'],
+        'POST /farmer/login' => ['AuthController', 'login'],
+
         // Add admin auth routes here
         'GET /admin/login' => ['AdminAuthController', 'showLoginForm'],
         'POST /admin/login' => ['AdminAuthController', 'login'],
