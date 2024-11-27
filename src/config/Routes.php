@@ -26,7 +26,7 @@ return [
 
         // Farmer Management
         'GET /admin/farmers' => ['AdminController', 'manageFarmers'],
-        'GET /admin/farmers/{id}' => ['AdminController', 'viewFarmer'],
+        'GET /admin/farmers/view' => ['AdminController', 'viewFarmer'],
         'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
         'POST /admin/farmers/reject' => ['AdminController', 'rejectFarmer'],
         'POST /admin/farmers/suspend' => ['AdminController', 'suspendFarmer'],

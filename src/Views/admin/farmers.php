@@ -83,7 +83,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-2">
-                                    <a href="/admin/farmers/<?= $farmer['id'] ?>" class="font-medium text-blue-600 hover:text-blue-800">View</a>
+                                    <a href="/admin/farmers/view?id=<?= $farmer['id'] ?>" class="font-medium text-blue-600 hover:text-blue-800">View Details</a>
                                     <?php if ($farmer['status'] === 'pending'): ?>
                                         <form action="/admin/farmers/approve" method="POST" class="inline">
                                             <input type="hidden" name="farmer_id" value="<?= $farmer['id'] ?>">

@@ -1,28 +1,41 @@
 <?php
+
 namespace App\Views\Shared;
+
 use App\Utils\Functions;
+use App\Utils\AssetsHelper;
 
 if (!defined('APP_ROOT')) {
     define('APP_ROOT', dirname(dirname(__DIR__)));
 }
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? $pageTitle . ' - AgriKonnect' : 'AgriKonnect'; ?></title>
     <link rel="icon" type="image/png" href="images/favicon/favicon-16x16.png" />
-    <!-- CSS Files -->
-    <link rel="stylesheet" href="/css/bootstrap.min.css">
-    <link rel="stylesheet" href="/css/main.css">
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/nouislider.min.css">
-    <link rel="stylesheet" href="/css/swiper-bundle.min.css">
-    <link rel="stylesheet" href="/css/venobox.css">
-    <link rel="stylesheet" href="lib/css/swiper-bundle.min.css" />
-    <link rel="stylesheet" href="/lib/css/bvselect.css" />
+
+    <?php echo AssetsHelper::loadCSS(
+        [
+            'bootstrap.min.css',
+            'main.css',
+            'style.css',
+            'swiper-bundle.min.css',
+            'nouislider.min.css',
+            'venobox.css'
+        ]
+    ); ?>
+
+    <!-- Library CSS Files -->
+    <link rel="stylesheet" href="<?php echo AssetsHelper::lib('css/swiper-bundle.min.css'); ?>" />
+    <link rel="stylesheet" href="<?php echo AssetsHelper::lib('css/bvselect.css'); ?>" />
 </head>
+
 <body>
     <header>
         <!-- Header Top -->
@@ -51,7 +64,7 @@ if (!defined('APP_ROOT')) {
                 <div class="header__center-content">
                     <div class="header__brand">
                         <a href="/">
-                            <img src="/images/logo.png" alt="AgriKonnect">
+                            <img src="<?php echo AssetsHelper::logo(); ?>" alt="AgriKonnect">
                         </a>
                     </div>
 

@@ -110,4 +110,58 @@ class DataHelper
 
         return round($bytes, $precision) . ' ' . $units[$pow];
     }
+
+    /**
+     * Get CSS classes for farmer status badges
+     */
+    public static function getFarmerStatusClass(string $status): string
+    {
+        return match ($status) {
+            'active' => 'bg-green-100 text-green-800',
+            'pending' => 'bg-yellow-100 text-yellow-800',
+            'suspended' => 'bg-red-100 text-red-800',
+            'rejected' => 'bg-gray-100 text-gray-800',
+            default => 'bg-gray-100 text-gray-800'
+        };
+    }
+
+    /**
+     * Format date in a consistent way
+     */
+    public static function formatDate(?string $date, string $format = 'Y-m-d H:i:s'): string
+    {
+        if (!$date) {
+            return 'N/A';
+        }
+
+        return date($format, strtotime($date));
+    }
+
+    /**
+     * Format relative time (e.g., "2 hours ago")
+     */
+    public static function formatRelativeTime(?string $date): string
+    {
+        if (!$date) {
+            return 'N/A';
+        }
+
+        $timestamp = strtotime($date);
+        $difference = time() - $timestamp;
+
+        if ($difference < 60) {
+            return 'Just now';
+        }
+        if ($difference < 3600) {
+            return floor($difference / 60) . ' minutes ago';
+        }
+        if ($difference < 86400) {
+            return floor($difference / 3600) . ' hours ago';
+        }
+        if ($difference < 604800) {
+            return floor($difference / 86400) . ' days ago';
+        }
+
+        return date('M j, Y', $timestamp);
+    }
 }

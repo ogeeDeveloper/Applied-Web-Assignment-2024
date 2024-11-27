@@ -553,10 +553,18 @@ class AdminController extends BaseController
         }
     }
 
-    public function viewFarmer(int $id): void
+    public function viewFarmer(): void
     {
         try {
-            $farmer = $this->userModel->getFarmerDetails($id);
+            $farmerId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+
+            if (!$farmerId) {
+                $this->setFlashMessage('Invalid farmer ID', 'error');
+                $this->redirect('/admin/farmers');
+                return;
+            }
+
+            $farmer = $this->userModel->getFarmerDetails($farmerId);
 
             if (!$farmer) {
                 $this->setFlashMessage('Farmer not found', 'error');
@@ -564,8 +572,23 @@ class AdminController extends BaseController
                 return;
             }
 
+            // Get status history
+            $statusHistory = $this->userModel->getFarmerStatusHistory($farmerId);
+
+            // Get current suspension if exists
+            $currentSuspension = $this->userModel->getCurrentSuspension($farmerId);
+
+            // Get rejection details if rejected
+            $rejectionDetails = null;
+            if ($farmer['status'] === 'rejected') {
+                $rejectionDetails = $this->userModel->getRejectionDetails($farmerId);
+            }
+
             $this->render('admin/farmer-details', [
                 'farmer' => $farmer,
+                'statusHistory' => $statusHistory,
+                'currentSuspension' => $currentSuspension,
+                'rejectionDetails' => $rejectionDetails,
                 'pageTitle' => 'Farmer Details - ' . $farmer['name']
             ]);
         } catch (Exception $e) {
