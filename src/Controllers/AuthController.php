@@ -268,6 +268,83 @@ class AuthController extends BaseController
         $stmt->execute($customerData);
     }
 
+    public function apiLogin(): void
+    {
+        try {
+            // Get credentials from POST data
+            $email = $_POST['email'] ?? '';
+            $password = $_POST['password'] ?? '';
+
+            if (empty($email) || empty($password)) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Email and password are required'
+                ], 400);
+                return;
+            }
+
+            $user = $this->userModel->findByEmail($email);
+
+            if (!$user || !password_verify($password, $user['password'])) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Invalid credentials'
+                ], 401);
+                return;
+            }
+
+            // Initialize session
+            SessionManager::initialize();
+            SessionManager::regenerate();
+
+            // Set session variables
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['user_role'] = $user['role'];
+            $_SESSION['is_authenticated'] = true;
+            $_SESSION['last_activity'] = time();
+
+            // Update last login timestamp
+            $this->userModel->updateLastLogin($user['id']);
+
+            // Get the appropriate redirect URL based on role
+            $redirectUrl = match ($user['role']) {
+                'admin' => '/admin/dashboard',
+                'farmer' => '/farmer/dashboard',
+                'customer' => '/customer/dashboard',
+                default => '/login'
+            };
+
+            $this->jsonResponse([
+                'success' => true,
+                'message' => 'Login successful',
+                'redirect' => $redirectUrl,
+                'user' => [
+                    'id' => $user['id'],
+                    'name' => $user['name'],
+                    'email' => $user['email'],
+                    'role' => $user['role']
+                ]
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error("API Login error: " . $e->getMessage());
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'An error occurred during login'
+            ], 500);
+        }
+    }
+
+    // Add this helper method to User model if not exists
+    public function updateLastLogin(int $userId): void
+    {
+        $stmt = $this->db->prepare("
+        UPDATE users 
+        SET last_login = NOW() 
+        WHERE id = :user_id
+    ");
+        $stmt->execute(['user_id' => $userId]);
+    }
+
     public function login(string $email, string $password): array
     {
         try {

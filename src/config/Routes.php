@@ -17,9 +17,11 @@ return [
 
         // Farmer auth routes
         'GET /register/farmer' => ['AuthController', 'farmerRegistrationForm'],
-        'POST /register/farmer' => ['AuthController', 'register'],
+        // 'POST /farmer/register' => ['AuthController', 'farmerRegister'],
+        'POST /farmer/register' => ['AuthController', 'register'],
         'GET /farmer/login' => ['AuthController', 'farmerLoginForm'],
-        'POST /farmer/login' => ['AuthController', 'login'],
+        'POST /api/auth/login' => ['AuthController', 'apiLogin'],
+        // 'POST /farmer/login' => ['AuthController', 'login'],
 
         // Add admin auth routes here
         'GET /admin/login' => ['AdminAuthController', 'showLoginForm'],
