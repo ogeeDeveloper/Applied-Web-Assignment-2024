@@ -55,6 +55,7 @@ return [
         'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
         'POST /admin/farmers/reject' => ['AdminController', 'rejectFarmer'],
         'POST /admin/farmers/suspend' => ['AdminController', 'suspendFarmer'],
+        'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
 
         // System
         'GET /admin/system' => ['AdminController', 'systemHealth'],
@@ -62,7 +63,7 @@ return [
         'GET /admin/system/metrics' => ['AdminController', 'systemMetrics'],
 
         // API Endpoints
-        'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
+        // 'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
     ],
     'protected' => [
         'GET /customer/dashboard' => ['CustomerController', 'dashboard'],

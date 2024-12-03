@@ -106,7 +106,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-2">
-                                    <button onclick="showViewModal(<?= $farmer['id'] ?>)" class="font-medium text-blue-600 hover:text-blue-800">View Details</button>
+                                    <a href="/admin/farmers/view?id=<?= $farmer['id'] ?>" class="btn btn-primary">View Details</a>
                                     <?php if ($farmer['status'] === 'pending'): ?>
                                         <button onclick="approveFarmer(<?= $farmer['id'] ?>)" class="font-medium text-green-600 hover:text-green-800">Approve</button>
                                     <?php elseif ($farmer['status'] === 'active'): ?>
@@ -125,7 +125,7 @@
         <!-- Pagination section remains the same -->
     </div>
 
-    <!-- Enhanced View Farmer Modal -->
+    <!-- View Farmer Details Modal -->
     <div id="viewFarmerModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
         <div class="relative top-20 mx-auto p-5 border max-w-4xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
@@ -137,23 +137,19 @@
                     </svg>
                 </button>
             </div>
-            <div id="farmerDetails" class="mt-4">
-                <!-- Tabs -->
+            <div class="mt-4">
                 <div class="border-b border-gray-200">
                     <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                        <button onclick="switchTab('profile')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Profile</button>
-                        <button onclick="switchTab('products')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Products</button>
-                        <button onclick="switchTab('orders')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Orders</button>
-                        <button onclick="switchTab('activity')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Activity Log</button>
+                        <button onclick="switchTab('profile')" class="tab-button text-green-600 border-green-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Profile</button>
+                        <button onclick="switchTab('products')" class="tab-button text-gray-500 border-transparent whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Products</button>
+                        <button onclick="switchTab('orders')" class="tab-button text-gray-500 border-transparent whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Orders</button>
+                        <button onclick="switchTab('activity')" class="tab-button text-gray-500 border-transparent whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Activity Log</button>
                     </nav>
                 </div>
-                <!-- Tab Content -->
-                <div class="mt-4">
-                    <div id="profile-tab" class="tab-content"></div>
-                    <div id="products-tab" class="tab-content hidden"></div>
-                    <div id="orders-tab" class="tab-content hidden"></div>
-                    <div id="activity-tab" class="tab-content hidden"></div>
-                </div>
+                <div id="profile-tab" class="tab-content mt-4"></div>
+                <div id="products-tab" class="tab-content hidden mt-4"></div>
+                <div id="orders-tab" class="tab-content hidden mt-4"></div>
+                <div id="activity-tab" class="tab-content hidden mt-4"></div>
             </div>
         </div>
     </div>
@@ -243,11 +239,28 @@
         // Enhanced modal management
         let currentFarmerId = null;
 
-        function showViewModal(farmerId) {
-            currentFarmerId = farmerId;
-            document.getElementById('viewFarmerModal').classList.remove('hidden');
-            loadFarmerDetails(farmerId);
-            switchTab('profile');
+        async function showViewModal(farmerId) {
+            currentFarmerId = farmerId; // Set the current farmer ID first
+            try {
+                const response = await fetch(`/admin/farmers/view?id=${farmerId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to load farmer details');
+                }
+
+                // Show the modal first
+                document.getElementById('viewFarmerModal').classList.remove('hidden');
+
+                // Then load the profile tab
+                await switchTab('profile');
+            } catch (error) {
+                console.error('Error loading farmer details:', error);
+                alert('Failed to load farmer details. Please try again.');
+            }
         }
 
         async function loadFarmerDetails(farmerId) {
@@ -264,6 +277,8 @@
         }
 
         async function switchTab(tabName) {
+            if (!currentFarmerId) return;
+
             // Update active tab styling
             document.querySelectorAll('.tab-button').forEach(button => {
                 button.classList.remove('text-green-600', 'border-green-600');
@@ -280,20 +295,42 @@
             const tabContent = document.getElementById(`${tabName}-tab`);
             tabContent.classList.remove('hidden');
 
-            // Load tab-specific content
-            switch (tabName) {
-                case 'profile':
-                    await loadFarmerProfile();
-                    break;
-                case 'products':
-                    await loadFarmerProducts();
-                    break;
-                case 'orders':
-                    await loadFarmerOrders();
-                    break;
-                case 'activity':
-                    await loadFarmerActivity();
-                    break;
+            try {
+                // Show loading state
+                tabContent.innerHTML = '<div class="text-center py-4">Loading...</div>';
+
+                const response = await fetch(`/admin/api/farmers/${currentFarmerId}/${tabName}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || `Failed to load ${tabName} data`);
+                }
+
+                // Update tab content based on the tab
+                switch (tabName) {
+                    case 'profile':
+                        populateProfileTab(data.profile);
+                        break;
+                    case 'products':
+                        populateProductsTab(data.products);
+                        break;
+                    case 'orders':
+                        populateOrdersTab(data.orders);
+                        break;
+                    case 'activity':
+                        populateActivityTab(data.activities);
+                        break;
+                }
+            } catch (error) {
+                console.error(`Error loading ${tabName} data:`, error);
+                tabContent.innerHTML = `
+            <div class="text-center text-red-600 py-4">
+                Failed to load ${tabName} data. Please try again.
+            </div>
+        `;
             }
         }
 
@@ -476,5 +513,10 @@
                 const matchesStatus = !statusFilter || status.includes(statusFilter);
                 row.style.display = matchesSearch && matchesStatus ? '' : 'none';
             });
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewFarmerModal').classList.add('hidden');
+            currentFarmerId = null;
         }
     </script>

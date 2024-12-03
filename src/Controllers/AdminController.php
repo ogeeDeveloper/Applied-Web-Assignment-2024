@@ -656,10 +656,31 @@ class AdminController extends BaseController
         }
     }
 
-    public function getFarmerDetails(int $id): void
+    public function getFarmerDetails(): void
     {
         try {
-            $farmer = $this->userModel->getFarmerDetails($id);
+            // Get farmer ID from URL
+            $farmerId = $this->getRouteParam('id');
+
+            if (!$farmerId) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Farmer ID is required'
+                ], 400);
+                return;
+            }
+
+            // Validate admin access
+            if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+                return;
+            }
+
+            // Get farmer details
+            $farmer = $this->userModel->getFarmerDetails($farmerId);
 
             if (!$farmer) {
                 $this->jsonResponse([
@@ -669,16 +690,45 @@ class AdminController extends BaseController
                 return;
             }
 
+            // Get additional details
+            $stats = [
+                'total_products' => $farmer['product_count'] ?? 0,
+                'total_orders' => $farmer['order_count'] ?? 0,
+                'total_revenue' => $farmer['total_revenue'] ?? 0
+            ];
+
+            $statusHistory = $this->userModel->getFarmerStatusHistory($farmerId);
+            $currentSuspension = $this->userModel->getCurrentSuspension($farmerId);
+
             $this->jsonResponse([
                 'success' => true,
-                'data' => $farmer
+                'farmer' => $farmer,
+                'stats' => $stats,
+                'statusHistory' => $statusHistory,
+                'currentSuspension' => $currentSuspension
             ]);
         } catch (Exception $e) {
-            $this->logger->error("Error getting farmer details: " . $e->getMessage());
+            $this->logger->error("Error getting farmer details: " . $e->getMessage(), [
+                'farmer_id' => $farmerId ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
+
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Error loading farmer details'
+                'message' => 'Failed to load farmer details'
             ], 500);
         }
+    }
+
+    protected function getRouteParam(string $name): ?string
+    {
+        $uri = $_SERVER['REQUEST_URI'];
+        $pattern = "#/admin/api/farmer/(\d+)#";
+
+        if (preg_match($pattern, $uri, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 }
