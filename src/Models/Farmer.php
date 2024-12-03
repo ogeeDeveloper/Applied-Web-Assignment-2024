@@ -9,12 +9,14 @@ class Farmer
     private $db;
     private $logger;
     private $mediaManager;
+    private $userModel;
 
     public function __construct(PDO $db, $logger)
     {
         $this->db = $db;
         $this->logger = $logger;
         $this->mediaManager = new MediaManager($db, $logger);
+        $this->userModel = new User($db, $logger);
     }
 
     // Find a farmer by their email address
@@ -107,11 +109,75 @@ class Farmer
     // }
 
     // Get all farmers
-    public function getAllFarmers()
+    public function getAllFarmers(?array $filters = null, ?int $limit = null, ?int $offset = null): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM farmers");
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $sql = "SELECT u.*, fp.*, 
+                COUNT(DISTINCT p.id) as product_count
+                FROM users u
+                JOIN farmer_profiles fp ON u.id = fp.user_id
+                LEFT JOIN products p ON fp.farmer_id = p.farmer_id
+                WHERE u.role = 'farmer'";
+
+            $params = [];
+
+            if ($filters) {
+                if (!empty($filters['status'])) {
+                    $sql .= " AND fp.status = :status";
+                    $params['status'] = $filters['status'];
+                }
+                if (!empty($filters['farm_type'])) {
+                    $sql .= " AND fp.farm_type = :farm_type";
+                    $params['farm_type'] = $filters['farm_type'];
+                }
+                if (!empty($filters['search'])) {
+                    $sql .= " AND (u.name LIKE :search OR fp.farm_name LIKE :search OR fp.location LIKE :search)";
+                    $params['search'] = "%{$filters['search']}%";
+                }
+            }
+
+            $sql .= " GROUP BY u.id, fp.farmer_id, fp.status";
+            $sql .= " ORDER BY fp.created_at DESC";
+
+            if ($limit !== null) {
+                $sql .= " LIMIT :limit";
+                if ($offset !== null) {
+                    $sql .= " OFFSET :offset";
+                }
+            }
+
+            $stmt = $this->db->prepare($sql);
+
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+
+            if ($limit !== null) {
+                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+                if ($offset !== null) {
+                    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+                }
+            }
+
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Ensure product_count is set for each row
+            foreach ($result as &$row) {
+                if (!isset($row['product_count'])) {
+                    $row['product_count'] = 0;
+                }
+            }
+
+            return $result;
+        } catch (\PDOException $e) {
+            $this->logger->error("Database error in getAllFarmers: " . $e->getMessage(), [
+                'sql' => $sql ?? 'No SQL available',
+                'params' => $params ?? 'No params available',
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     public function updateProfile(int $userId, array $data, ?array $files = null): array
@@ -265,10 +331,73 @@ class Farmer
                 'statusHistory' => $statusHistory,
                 'pageTitle' => 'Farmer Details - ' . $farmer['name']
             ]);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->logger->error("Error viewing farmer: " . $e->getMessage());
             $this->setFlashMessage('Error loading farmer details', 'error');
             $this->redirect('/admin/farmers');
+        }
+    }
+
+    public function getAllFarmersWithProductCounts(?array $filters = null, ?int $limit = null, ?int $offset = null): array
+    {
+        try {
+            $sql = "SELECT 
+                u.*,
+                fp.*,
+                COALESCE(COUNT(DISTINCT p.id), 0) as product_count,
+                COALESCE(MAX(fp.status), 'pending') as current_status
+            FROM users u
+            JOIN farmer_profiles fp ON u.id = fp.user_id
+            LEFT JOIN products p ON fp.farmer_id = p.farmer_id
+            WHERE u.role = 'farmer'";
+
+            $params = [];
+
+            // Add filters
+            if ($filters) {
+                if (!empty($filters['status'])) {
+                    $sql .= " AND fp.status = :status";
+                    $params['status'] = $filters['status'];
+                }
+                if (!empty($filters['farm_type'])) {
+                    $sql .= " AND fp.farm_type = :farm_type";
+                    $params['farm_type'] = $filters['farm_type'];
+                }
+                if (!empty($filters['search'])) {
+                    $sql .= " AND (u.name LIKE :search OR fp.farm_name LIKE :search OR fp.location LIKE :search)";
+                    $params['search'] = "%{$filters['search']}%";
+                }
+            }
+
+            $sql .= " GROUP BY u.id, fp.farmer_id";
+            $sql .= " ORDER BY u.created_at DESC";
+
+            if ($limit !== null) {
+                $sql .= " LIMIT :limit";
+                if ($offset !== null) {
+                    $sql .= " OFFSET :offset";
+                }
+            }
+
+            $stmt = $this->db->prepare($sql);
+
+            // Bind parameters
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+
+            if ($limit !== null) {
+                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+                if ($offset !== null) {
+                    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+                }
+            }
+
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting farmers with product counts: " . $e->getMessage());
+            throw $e;
         }
     }
 }

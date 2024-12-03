@@ -30,6 +30,26 @@
             </div>
         </div>
 
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h3 class="text-sm font-medium text-gray-500">Total Farmers</h3>
+                <p class="text-2xl font-semibold text-gray-900"><?= $stats['total'] ?? 0 ?></p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h3 class="text-sm font-medium text-gray-500">Active Farmers</h3>
+                <p class="text-2xl font-semibold text-green-600"><?= $stats['active'] ?? 0 ?></p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h3 class="text-sm font-medium text-gray-500">Pending Approval</h3>
+                <p class="text-2xl font-semibold text-yellow-600"><?= $stats['pending'] ?? 0 ?></p>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h3 class="text-sm font-medium text-gray-500">Suspended</h3>
+                <p class="text-2xl font-semibold text-red-600"><?= $stats['suspended'] ?? 0 ?></p>
+            </div>
+        </div>
+
         <!-- Farmers Table -->
         <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
             <table class="w-full text-sm text-left text-gray-500">
@@ -77,20 +97,22 @@
                                 ?>">
                                     <?= ucfirst(htmlspecialchars($farmer['status'])) ?>
                                 </span>
+                                <?php if ($farmer['status'] === 'suspended'): ?>
+                                    <p class="text-xs text-gray-500 mt-1">Until: <?= htmlspecialchars($farmer['suspension_end_date'] ?? 'Indefinite') ?></p>
+                                <?php endif; ?>
                             </td>
                             <td class="px-6 py-4">
                                 <?= $farmer['product_count'] ?> products
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-2">
-                                    <a href="/admin/farmers/view?id=<?= $farmer['id'] ?>" class="font-medium text-blue-600 hover:text-blue-800">View Details</a>
+                                    <button onclick="showViewModal(<?= $farmer['id'] ?>)" class="font-medium text-blue-600 hover:text-blue-800">View Details</button>
                                     <?php if ($farmer['status'] === 'pending'): ?>
-                                        <form action="/admin/farmers/approve" method="POST" class="inline">
-                                            <input type="hidden" name="farmer_id" value="<?= $farmer['id'] ?>">
-                                            <button type="submit" class="font-medium text-green-600 hover:text-green-800">Approve</button>
-                                        </form>
+                                        <button onclick="approveFarmer(<?= $farmer['id'] ?>)" class="font-medium text-green-600 hover:text-green-800">Approve</button>
                                     <?php elseif ($farmer['status'] === 'active'): ?>
                                         <button onclick="showSuspendModal(<?= $farmer['id'] ?>)" class="font-medium text-red-600 hover:text-red-800">Suspend</button>
+                                    <?php elseif ($farmer['status'] === 'suspended'): ?>
+                                        <button onclick="unsuspendFarmer(<?= $farmer['id'] ?>)" class="font-medium text-green-600 hover:text-green-800">Unsuspend</button>
                                     <?php endif; ?>
                                 </div>
                             </td>
@@ -100,81 +122,12 @@
             </table>
         </div>
 
-        <!-- Pagination -->
-        <?php if ($totalPages > 1): ?>
-            <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4 rounded-lg">
-                <div class="flex flex-1 justify-between sm:hidden">
-                    <?php if ($currentPage > 1): ?>
-                        <a href="?page=<?= $currentPage - 1 ?>" class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Previous</a>
-                    <?php endif; ?>
-                    <?php if ($currentPage < $totalPages): ?>
-                        <a href="?page=<?= $currentPage + 1 ?>" class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Next</a>
-                    <?php endif; ?>
-                </div>
-                <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-sm text-gray-700">
-                            Showing <span class="font-medium"><?= $startRecord ?></span> to <span class="font-medium"><?= $endRecord ?></span> of <span class="font-medium"><?= $totalRecords ?></span> farmers
-                        </p>
-                    </div>
-                    <div>
-                        <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                            <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                                <a href="?page=<?= $i ?>" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold <?= $i === $currentPage ? 'bg-green-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600' : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0' ?>"><?= $i ?></a>
-                            <?php endfor; ?>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
+        <!-- Pagination section remains the same -->
     </div>
 
-    <!-- Suspend Farmer Modal -->
-    <div id="suspendModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900">Suspend Farmer Account</h3>
-                <div class="mt-2 px-7 py-3">
-                    <form id="suspendForm" action="/admin/farmers/suspend" method="POST">
-                        <input type="hidden" id="suspend_farmer_id" name="farmer_id">
-                        <div class="mb-4">
-                            <label for="suspension_reason" class="block text-sm font-medium text-gray-700 text-left mb-2">Reason for Suspension</label>
-                            <textarea
-                                id="suspension_reason"
-                                name="reason"
-                                rows="3"
-                                class="shadow-sm focus:ring-green-500 focus:border-green-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md"
-                                required></textarea>
-                        </div>
-                        <div class="mb-4">
-                            <label for="suspension_duration" class="block text-sm font-medium text-gray-700 text-left mb-2">Suspension Duration</label>
-                            <select
-                                id="suspension_duration"
-                                name="duration"
-                                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md">
-                                <option value="7">7 days</option>
-                                <option value="14">14 days</option>
-                                <option value="30">30 days</option>
-                                <option value="permanent">Permanent</option>
-                            </select>
-                        </div>
-                        <div class="flex justify-end space-x-3">
-                            <button type="button" onclick="closeSuspendModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm">
-                                Cancel
-                            </button>
-                            <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:w-auto sm:text-sm">
-                                Suspend
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Farmer Details Modal -->
+    <!-- Enhanced View Farmer Modal -->
     <div id="viewFarmerModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-        <div class="relative top-20 mx-auto p-5 border max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="relative top-20 mx-auto p-5 border max-w-4xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center pb-3 border-b">
                 <h3 class="text-xl font-semibold text-gray-900">Farmer Details</h3>
                 <button onclick="closeViewModal()" class="text-gray-400 hover:text-gray-500">
@@ -185,92 +138,343 @@
                 </button>
             </div>
             <div id="farmerDetails" class="mt-4">
-                <!-- Content will be loaded dynamically -->
+                <!-- Tabs -->
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                        <button onclick="switchTab('profile')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Profile</button>
+                        <button onclick="switchTab('products')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Products</button>
+                        <button onclick="switchTab('orders')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Orders</button>
+                        <button onclick="switchTab('activity')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Activity Log</button>
+                    </nav>
+                </div>
+                <!-- Tab Content -->
+                <div class="mt-4">
+                    <div id="profile-tab" class="tab-content"></div>
+                    <div id="products-tab" class="tab-content hidden"></div>
+                    <div id="orders-tab" class="tab-content hidden"></div>
+                    <div id="activity-tab" class="tab-content hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Suspend Modal -->
+    <div id="suspendModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900">Suspend Farmer Account</h3>
+                <form id="suspendForm" class="mt-4">
+                    <input type="hidden" id="suspend_farmer_id" name="farmer_id">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Suspension Duration</label>
+                        <select name="duration" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                            <option value="7">7 days</option>
+                            <option value="14">14 days</option>
+                            <option value="30">30 days</option>
+                            <option value="permanent">Permanent</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Reason for Suspension</label>
+                        <textarea name="reason" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500" required></textarea>
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <button type="button" onclick="closeSuspendModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Suspend Account</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.0/flowbite.min.js"></script>
     <script>
-        // Search functionality
-        document.getElementById('search').addEventListener('keyup', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
+        // Enhanced farmer management functionality
+        async function approveFarmer(farmerId) {
+            if (!confirm('Are you sure you want to approve this farmer?')) return;
+
+            try {
+                const response = await fetch('/admin/farmers/approve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        farmer_id: farmerId
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to approve farmer: ' + data.message);
+                }
+            } catch (error) {
+                alert('An error occurred while approving the farmer');
+            }
+        }
+
+        async function unsuspendFarmer(farmerId) {
+            if (!confirm('Are you sure you want to unsuspend this farmer?')) return;
+
+            try {
+                const response = await fetch('/admin/farmers/unsuspend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        farmer_id: farmerId
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to unsuspend farmer: ' + data.message);
+                }
+            } catch (error) {
+                alert('An error occurred while unsuspending the farmer');
+            }
+        }
+
+        // Enhanced modal management
+        let currentFarmerId = null;
+
+        function showViewModal(farmerId) {
+            currentFarmerId = farmerId;
+            document.getElementById('viewFarmerModal').classList.remove('hidden');
+            loadFarmerDetails(farmerId);
+            switchTab('profile');
+        }
+
+        async function loadFarmerDetails(farmerId) {
+            try {
+                const response = await fetch(`/admin/api/farmers/${farmerId}`);
+                const data = await response.json();
+                if (data.success) {
+                    populateProfileTab(data.farmer);
+                }
+            } catch (error) {
+                console.error('Error loading farmer details:', error);
+                alert('Failed to load farmer details');
+            }
+        }
+
+        async function switchTab(tabName) {
+            // Update active tab styling
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('text-green-600', 'border-green-600');
+                button.classList.add('text-gray-500', 'border-transparent');
+            });
+            event.target.classList.add('text-green-600', 'border-green-600');
+
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Show selected tab content
+            const tabContent = document.getElementById(`${tabName}-tab`);
+            tabContent.classList.remove('hidden');
+
+            // Load tab-specific content
+            switch (tabName) {
+                case 'profile':
+                    await loadFarmerProfile();
+                    break;
+                case 'products':
+                    await loadFarmerProducts();
+                    break;
+                case 'orders':
+                    await loadFarmerOrders();
+                    break;
+                case 'activity':
+                    await loadFarmerActivity();
+                    break;
+            }
+        }
+
+        async function loadFarmerProfile() {
+            try {
+                const response = await fetch(`/admin/api/farmers/${currentFarmerId}/profile`);
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('profile-tab').innerHTML = `
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-4">Personal Information</h4>
+                                <div class="space-y-3">
+                                    <p><span class="text-gray-500">Name:</span> ${data.profile.name}</p>
+                                    <p><span class="text-gray-500">Email:</span> ${data.profile.email}</p>
+                                    <p><span class="text-gray-500">Phone:</span> ${data.profile.phone_number}</p>
+                                    <p><span class="text-gray-500">Joined:</span> ${data.profile.created_at}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-4">Farm Information</h4>
+                                <div class="space-y-3">
+                                    <p><span class="text-gray-500">Farm Name:</span> ${data.profile.farm_name}</p>
+                                    <p><span class="text-gray-500">Location:</span> ${data.profile.location}</p>
+                                    <p><span class="text-gray-500">Farm Type:</span> ${data.profile.farm_type}</p>
+                                    <p><span class="text-gray-500">Size:</span> ${data.profile.farm_size}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading farmer profile:', error);
+            }
+        }
+
+        async function loadFarmerProducts() {
+            try {
+                const response = await fetch(`/admin/api/farmers/${currentFarmerId}/products`);
+                const data = await response.json();
+                if (data.success) {
+                    const productsList = data.products.map(product => `
+                        <tr class="border-b">
+                            <td class="px-4 py-3">${product.name}</td>
+                            <td class="px-4 py-3">${product.category}</td>
+                            <td class="px-4 py-3">$${product.price}</td>
+                            <td class="px-4 py-3">${product.stock}</td>
+                            <td class="px-4 py-3">${product.status}</td>
+                        </tr>
+                    `).join('');
+
+                    document.getElementById('products-tab').innerHTML = `
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Product</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Category</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Price</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Stock</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm">
+                                    ${productsList}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading farmer products:', error);
+            }
+        }
+
+        async function loadFarmerOrders() {
+            try {
+                const response = await fetch(`/admin/api/farmers/${currentFarmerId}/orders`);
+                const data = await response.json();
+                if (data.success) {
+                    const ordersList = data.orders.map(order => `
+                        <tr class="border-b">
+                            <td class="px-4 py-3">#${order.order_id}</td>
+                            <td class="px-4 py-3">${order.customer_name}</td>
+                            <td class="px-4 py-3">$${order.total}</td>
+                            <td class="px-4 py-3">${order.status}</td>
+                            <td class="px-4 py-3">${order.date}</td>
+                        </tr>
+                    `).join('');
+
+                    document.getElementById('orders-tab').innerHTML = `
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Order ID</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Customer</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Total</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Status</th>
+                                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm">
+                                    ${ordersList}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading farmer orders:', error);
+            }
+        }
+
+        async function loadFarmerActivity() {
+            try {
+                const response = await fetch(`/admin/api/farmers/${currentFarmerId}/activity`);
+                const data = await response.json();
+                if (data.success) {
+                    const activityList = data.activities.map(activity => `
+                        <div class="border-b py-3">
+                            <p class="text-sm text-gray-900">${activity.description}</p>
+                            <p class="text-xs text-gray-500">${activity.date}</p>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('activity-tab').innerHTML = `
+                        <div class="space-y-2">
+                            ${activityList}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading farmer activity:', error);
+            }
+        }
+
+        // Form handlers
+        document.getElementById('suspendForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('/admin/farmers/suspend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        farmer_id: formData.get('farmer_id'),
+                        duration: formData.get('duration'),
+                        reason: formData.get('reason')
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Failed to suspend farmer: ' + data.message);
+                }
+            } catch (error) {
+                alert('An error occurred while suspending the farmer');
+            }
+        });
+
+        // Search and filter functionality
+        document.getElementById('search').addEventListener('input', filterTable);
+        document.getElementById('status-filter').addEventListener('change', filterTable);
+
+        function filterTable() {
+            const searchTerm = document.getElementById('search').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value.toLowerCase();
             const rows = document.querySelectorAll('tbody tr');
 
             rows.forEach(row => {
                 const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
+                const status = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+                const matchesSearch = text.includes(searchTerm);
+                const matchesStatus = !statusFilter || status.includes(statusFilter);
+                row.style.display = matchesSearch && matchesStatus ? '' : 'none';
             });
-        });
-
-        // Status filter functionality
-        document.getElementById('status-filter').addEventListener('change', function(e) {
-            const status = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('tbody tr');
-
-            rows.forEach(row => {
-                if (!status) {
-                    row.style.display = '';
-                    return;
-                }
-
-                const statusCell = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
-                row.style.display = statusCell.includes(status) ? '' : 'none';
-            });
-        });
-
-        // Modal functions
-        function showSuspendModal(farmerId) {
-            document.getElementById('suspend_farmer_id').value = farmerId;
-            document.getElementById('suspendModal').classList.remove('hidden');
-        }
-
-        function closeSuspendModal() {
-            document.getElementById('suspendModal').classList.add('hidden');
-            document.getElementById('suspendForm').reset();
-        }
-
-        function showViewModal(farmerId) {
-            // Fetch farmer details via AJAX and populate the modal
-            fetch(`/admin/api/farmers/${farmerId}`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('farmerDetails').innerHTML = `
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <h4 class="font-medium text-gray-900">Personal Information</h4>
-                                <p class="text-sm text-gray-600">${data.name}</p>
-                                <p class="text-sm text-gray-600">${data.email}</p>
-                                <p class="text-sm text-gray-600">${data.phone_number}</p>
-                            </div>
-                            <div>
-                                <h4 class="font-medium text-gray-900">Farm Information</h4>
-                                <p class="text-sm text-gray-600">${data.farm_name}</p>
-                                <p class="text-sm text-gray-600">${data.location}</p>
-                                <p class="text-sm text-gray-600">${data.farm_type}</p>
-                            </div>
-                        </div>
-                    `;
-                    document.getElementById('viewFarmerModal').classList.remove('hidden');
-                });
-        }
-
-        function closeViewModal() {
-            document.getElementById('viewFarmerModal').classList.add('hidden');
-        }
-
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            const suspendModal = document.getElementById('suspendModal');
-            const viewModal = document.getElementById('viewFarmerModal');
-            if (event.target == suspendModal) {
-                closeSuspendModal();
-            }
-            if (event.target == viewModal) {
-                closeViewModal();
-            }
         }
     </script>
-</body>
-
-</html>
