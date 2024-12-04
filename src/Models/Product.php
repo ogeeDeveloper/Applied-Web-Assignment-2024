@@ -31,6 +31,10 @@ class Product
      *
      * @throws \Exception If an error occurs during the file upload process.
      */
+
+    
+    
+
     public function create(array $data, array $files = null): array
     {
         try {
@@ -537,4 +541,114 @@ class Product
             return [];
         }
     }
+    public function getPopularProducts(int $limit = 10, ?string $category = null): array
+{
+    try {
+        $this->logger->info("Fetching popular products", ['limit' => $limit, 'category' => $category]);
+
+        $sql = "
+            SELECT 
+                p.*,
+                fp.farm_name,
+                fp.location,
+                COALESCE(oi.total_orders, 0) as order_count,
+                COALESCE(oi.total_quantity, 0) as total_quantity_sold
+            FROM products p
+            JOIN farmer_profiles fp ON p.farmer_id = fp.farmer_id
+            LEFT JOIN (
+                SELECT 
+                    product_id,
+                    COUNT(DISTINCT o.order_id) as total_orders,
+                    SUM(quantity) as total_quantity
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE o.order_status != 'cancelled'
+                GROUP BY product_id
+            ) oi ON p.product_id = oi.product_id
+            WHERE p.status = 'available'
+            AND p.stock_quantity > 0
+            " . ($category ? "AND p.category = :category" : "") . "
+            ORDER BY order_count DESC, total_quantity_sold DESC
+            LIMIT :limit";
+
+        $stmt = $this->db->prepare($sql);
+        
+        if ($category) {
+            $stmt->bindValue(':category', $category, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+
+        $stmt->execute();
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add additional product information
+        foreach ($products as &$product) {
+            // Check if product is organic
+            $product['is_organic'] = (bool)$product['organic_certified'];
+            
+            // Add stock status
+            $product['stock_status'] = $this->getStockStatus($product['stock_quantity'], $product['low_stock_alert_threshold']);
+            
+            // Format price
+            $product['formatted_price'] = number_format($product['price_per_unit'], 2);
+        }
+
+        $this->logger->info("Successfully fetched popular products", ['count' => count($products)]);
+        return $products;
+
+    } catch (PDOException $e) {
+        $this->logger->error("Error fetching popular products: " . $e->getMessage());
+        throw new Exception("Failed to fetch popular products");
+    }
+}
+
+/**
+ * Helper method to determine stock status
+ */
+private function getStockStatus(int $currentStock, int $threshold): string
+{
+    if ($currentStock <= 0) {
+        return 'out_of_stock';
+    } elseif ($currentStock <= $threshold) {
+        return 'low_stock';
+    }
+    return 'in_stock';
+}
+
+/**
+ * Get popular products by category
+ */
+public function getPopularProductsByCategory(string $category, int $limit = 5): array
+{
+    return $this->getPopularProducts($limit, $category);
+}
+
+/**
+ * Get popular products across all categories with category grouping
+ */
+public function getPopularProductsByCategories(int $limit_per_category = 5): array
+{
+    try {
+        $sql = "
+            SELECT DISTINCT category 
+            FROM products 
+            WHERE status = 'available'
+            ORDER BY category";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+        $categories = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $result = [];
+        foreach ($categories as $category) {
+            $result[$category] = $this->getPopularProductsByCategory($category, $limit_per_category);
+        }
+
+        return $result;
+
+    } catch (PDOException $e) {
+        $this->logger->error("Error fetching products by categories: " . $e->getMessage());
+        throw new Exception("Failed to fetch products by categories");
+    }
+}
 }
