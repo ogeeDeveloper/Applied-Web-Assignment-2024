@@ -12,7 +12,7 @@ return [
         'GET /login' => ['AuthController', 'loginForm'],
         'POST /login' => ['AuthController', 'login'],
         'GET /register' => ['AuthController', 'customerRegistrationForm'],
-        'POST /register' => ['AuthController', 'register'],
+        'POST /api/auth/customers/register' => ['AuthController', 'register'],
         'POST /logout' => ['AuthController', 'logout'],
 
         // Farmer auth routes

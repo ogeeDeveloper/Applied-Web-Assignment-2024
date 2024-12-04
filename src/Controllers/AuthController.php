@@ -24,6 +24,8 @@ class AuthController extends BaseController
         $this->logger = $logger;
         $this->farmerModel = new Farmer($db, $logger);
         $this->customerModel = new Customer($db, $logger);
+
+        SessionManager::initialize();
     }
 
     public function loginForm()
@@ -413,10 +415,9 @@ class AuthController extends BaseController
         return null;
     }
 
-    public function isAuthenticated(): bool
+    private function isAuthenticated(): bool
     {
-        session_start();
-        return isset($_SESSION['user_id']);
+        return SessionManager::isAuthenticated();
     }
 
     public function hasRole(string $role): bool
