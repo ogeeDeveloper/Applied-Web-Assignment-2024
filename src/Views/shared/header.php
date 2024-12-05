@@ -1,4 +1,5 @@
 <?php
+<<<<<<< HEAD
 // PHP Variables for Dynamic Content
 $storeLocation = "Lincoln- 344, Illinois, Chicago, USA";
 $cartItemCount = 2; // Example cart item count
@@ -47,6 +48,53 @@ $currencyOptions = [
                                 <option value="<?php echo $key; ?>"><?php echo $value; ?></option>
                             <?php endforeach; ?>
                         </select>
+=======
+
+namespace App\Views\Shared;
+
+use App\Utils\Functions;
+use App\Utils\AssetsHelper;
+
+if (!defined('APP_ROOT')) {
+    define('APP_ROOT', dirname(dirname(__DIR__)));
+}
+
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo isset($pageTitle) ? $pageTitle . ' - AgriKonnect' : 'AgriKonnect'; ?></title>
+    <link rel="icon" type="image/png" href="images/favicon/favicon-16x16.png" />
+
+    <?php echo AssetsHelper::loadCSS(
+        [
+            'bootstrap.min.css',
+            'main.css',
+            'style.css',
+            'swiper-bundle.min.css',
+            'nouislider.min.css',
+            'venobox.css'
+        ]
+    ); ?>
+
+    <!-- Library CSS Files -->
+    <link rel="stylesheet" href="<?php echo AssetsHelper::lib('css/swiper-bundle.min.css'); ?>" />
+    <link rel="stylesheet" href="<?php echo AssetsHelper::lib('css/bvselect.css'); ?>" />
+</head>
+
+<body>
+    <header>
+        <!-- Header Top -->
+        <div class="header__top">
+            <div class="container">
+                <div class="header__top-content">
+                    <div class="header__top-left">
+                        <span>Location: AgriKonnect, Jamaica</span>
+>>>>>>> 4d4fb05ad719ef70d7991bbe5354b53fd4d6f483
                     </div>
                     <div class="header__in">
                         <a href="sign-in.php">Sign in </a>
@@ -116,6 +164,18 @@ $currencyOptions = [
     <?php
 // PHP Arrays for Menu Items
 
+<<<<<<< HEAD
+=======
+        <!-- Header Center -->
+        <div class="header__center">
+            <div class="container">
+                <div class="header__center-content">
+                    <div class="header__brand">
+                        <a href="/">
+                            <img src="<?php echo AssetsHelper::logo(); ?>" alt="AgriKonnect">
+                        </a>
+                    </div>
+>>>>>>> 4d4fb05ad719ef70d7991bbe5354b53fd4d6f483
 
 $shopPages = [
     'Home' => 'index.html',

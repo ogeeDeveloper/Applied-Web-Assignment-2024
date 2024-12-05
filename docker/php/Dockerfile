@@ -17,6 +17,11 @@ RUN apt-get update && apt-get install -y \
     zip \
 
     unzip \
+<<<<<<< HEAD
+=======
+    default-mysql-client \
+    bash
+>>>>>>> 4d4fb05ad719ef70d7991bbe5354b53fd4d6f483
 
     default-mysql-client \
 
@@ -63,3 +68,10 @@ RUN dos2unix /var/www/docker/php/docker-entrypoint.sh && \
 CMD ["/bin/sh", "/var/www/docker/php/docker-entrypoint.sh"]
  
 
+<<<<<<< HEAD
+=======
+# Make entrypoint script executable and ensure it has Unix line endings
+COPY docker/php/docker-entrypoint.sh /var/www/docker/php/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /var/www/docker/php/docker-entrypoint.sh \
+    && chmod +x /var/www/docker/php/docker-entrypoint.sh
+>>>>>>> 4d4fb05ad719ef70d7991bbe5354b53fd4d6f483

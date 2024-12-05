@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Models\SystemHealth;
 use App\Utils\SessionManager;
 use App\Constants\Roles;
+use App\Models\Farmer;
 
 class AdminController extends BaseController
 {
@@ -22,6 +23,7 @@ class AdminController extends BaseController
     private Product $productModel;
     private SystemHealth $systemHealth;
     private string $adminLayout = 'admin/layouts/admin';
+    private Farmer $farmerModel;
 
     public function __construct(PDO $db, $logger)
     {
@@ -30,6 +32,7 @@ class AdminController extends BaseController
         $this->orderModel = new Order($db, $logger);
         $this->productModel = new Product($db, $logger);
         $this->systemHealth = new SystemHealth($db, $logger);
+        $this->farmerModel = new Farmer($db, $logger);
 
         // Initialize session
         SessionManager::initialize();
@@ -179,14 +182,48 @@ class AdminController extends BaseController
                 'search' => $_GET['search'] ?? null
             ];
 
-            // Get farmers with pagination
-            $farmers = $this->userModel->getAllFarmers($filters, $limit, $offset);
+            // Get farmers count first
             $totalRecords = $this->userModel->getTotalFarmersCount($filters);
-            $totalPages = ceil($totalRecords / $limit);
 
-            // Calculate pagination details
+            // Get stats (with error handling for each stat)
+            $stats = [];
+            try {
+                $stats = [
+                    'total' => $this->userModel->getTotalFarmersCount(),
+                    'active' => $this->userModel->getTotalFarmersCount(['status' => 'active']),
+                    'pending' => $this->userModel->getTotalFarmersCount(['status' => 'pending']),
+                    'suspended' => $this->userModel->getTotalFarmersCount(['status' => 'suspended'])
+                ];
+            } catch (Exception $e) {
+                $this->logger->error("Error fetching farmer stats: " . $e->getMessage());
+                $stats = [
+                    'total' => 0,
+                    'active' => 0,
+                    'pending' => 0,
+                    'suspended' => 0
+                ];
+            }
+
+            // Calculate pagination
+            $totalPages = ceil($totalRecords / $limit);
             $startRecord = $offset + 1;
             $endRecord = min($offset + $limit, $totalRecords);
+
+            // Get farmers list
+            $farmers = [];
+            try {
+                $farmers = $this->userModel->getAllFarmers($filters, $limit, $offset);
+
+                // Add product count if not present
+                foreach ($farmers as &$farmer) {
+                    if (!isset($farmer['product_count'])) {
+                        $farmer['product_count'] = 0;
+                    }
+                }
+            } catch (Exception $e) {
+                $this->logger->error("Error fetching farmers list: " . $e->getMessage());
+                throw $e;
+            }
 
             $this->render('admin/farmers', [
                 'pageTitle' => 'Manage Farmers - AgriKonnect Admin',
@@ -196,12 +233,33 @@ class AdminController extends BaseController
                 'totalRecords' => $totalRecords,
                 'startRecord' => $startRecord,
                 'endRecord' => $endRecord,
-                'filters' => $filters
-            ]);
+                'filters' => $filters,
+                'stats' => $stats
+            ], $this->adminLayout);  // Added adminLayout parameter
+
         } catch (Exception $e) {
-            $this->logger->error("Error loading farmers: " . $e->getMessage());
-            $this->setFlashMessage('Error loading farmer management page', 'error');
-            $this->redirect('/admin/dashboard');
+            $this->logger->error("Error in manageFarmers: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Instead of redirecting, render the page with an error message
+            $this->render('admin/farmers', [
+                'pageTitle' => 'Manage Farmers - AgriKonnect Admin',
+                'farmers' => [],
+                'currentPage' => 1,
+                'totalPages' => 0,
+                'totalRecords' => 0,
+                'startRecord' => 0,
+                'endRecord' => 0,
+                'filters' => [],
+                'stats' => [
+                    'total' => 0,
+                    'active' => 0,
+                    'pending' => 0,
+                    'suspended' => 0
+                ],
+                'error' => 'Failed to load farmers data. Please try again later.'
+            ], $this->adminLayout);
         }
     }
 
@@ -553,10 +611,18 @@ class AdminController extends BaseController
         }
     }
 
-    public function viewFarmer(int $id): void
+    public function viewFarmer(): void
     {
         try {
-            $farmer = $this->userModel->getFarmerDetails($id);
+            $farmerId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+
+            if (!$farmerId) {
+                $this->setFlashMessage('Invalid farmer ID', 'error');
+                $this->redirect('/admin/farmers');
+                return;
+            }
+
+            $farmer = $this->userModel->getFarmerDetails($farmerId);
 
             if (!$farmer) {
                 $this->setFlashMessage('Farmer not found', 'error');
@@ -564,8 +630,23 @@ class AdminController extends BaseController
                 return;
             }
 
+            // Get status history
+            $statusHistory = $this->userModel->getFarmerStatusHistory($farmerId);
+
+            // Get current suspension if exists
+            $currentSuspension = $this->userModel->getCurrentSuspension($farmerId);
+
+            // Get rejection details if rejected
+            $rejectionDetails = null;
+            if ($farmer['status'] === 'rejected') {
+                $rejectionDetails = $this->userModel->getRejectionDetails($farmerId);
+            }
+
             $this->render('admin/farmer-details', [
                 'farmer' => $farmer,
+                'statusHistory' => $statusHistory,
+                'currentSuspension' => $currentSuspension,
+                'rejectionDetails' => $rejectionDetails,
                 'pageTitle' => 'Farmer Details - ' . $farmer['name']
             ]);
         } catch (Exception $e) {
@@ -575,10 +656,31 @@ class AdminController extends BaseController
         }
     }
 
-    public function getFarmerDetails(int $id): void
+    public function getFarmerDetails(): void
     {
         try {
-            $farmer = $this->userModel->getFarmerDetails($id);
+            // Get farmer ID from URL
+            $farmerId = $this->getRouteParam('id');
+
+            if (!$farmerId) {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Farmer ID is required'
+                ], 400);
+                return;
+            }
+
+            // Validate admin access
+            if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+                $this->jsonResponse([
+                    'success' => false,
+                    'message' => 'Unauthorized access'
+                ], 403);
+                return;
+            }
+
+            // Get farmer details
+            $farmer = $this->userModel->getFarmerDetails($farmerId);
 
             if (!$farmer) {
                 $this->jsonResponse([
@@ -588,16 +690,45 @@ class AdminController extends BaseController
                 return;
             }
 
+            // Get additional details
+            $stats = [
+                'total_products' => $farmer['product_count'] ?? 0,
+                'total_orders' => $farmer['order_count'] ?? 0,
+                'total_revenue' => $farmer['total_revenue'] ?? 0
+            ];
+
+            $statusHistory = $this->userModel->getFarmerStatusHistory($farmerId);
+            $currentSuspension = $this->userModel->getCurrentSuspension($farmerId);
+
             $this->jsonResponse([
                 'success' => true,
-                'data' => $farmer
+                'farmer' => $farmer,
+                'stats' => $stats,
+                'statusHistory' => $statusHistory,
+                'currentSuspension' => $currentSuspension
             ]);
         } catch (Exception $e) {
-            $this->logger->error("Error getting farmer details: " . $e->getMessage());
+            $this->logger->error("Error getting farmer details: " . $e->getMessage(), [
+                'farmer_id' => $farmerId ?? null,
+                'trace' => $e->getTraceAsString()
+            ]);
+
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Error loading farmer details'
+                'message' => 'Failed to load farmer details'
             ], 500);
         }
+    }
+
+    protected function getRouteParam(string $name): ?string
+    {
+        $uri = $_SERVER['REQUEST_URI'];
+        $pattern = "#/admin/api/farmer/(\d+)#";
+
+        if (preg_match($pattern, $uri, $matches)) {
+            return $matches[1];
+        }
+
+        return null;
     }
 }

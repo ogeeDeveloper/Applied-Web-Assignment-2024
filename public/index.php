@@ -14,6 +14,7 @@ use App\Models\AppLogger;
 use App\Constants\Roles;
 use App\Utils\SessionManager;
 use App\Middleware\RoleMiddleware;
+use App\Utils\AssetsHelper;
 
 if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
     ini_set('session.cookie_secure', 1);
@@ -41,6 +42,9 @@ try {
 
     // Initialize logger
     $logger = new AppLogger('app');
+
+    // Initialize AssetsHelper
+    AssetsHelper::initialize();
 
     // Check required environment variables
     $requiredEnvVars = ['MYSQL_HOST', 'MYSQL_DATABASE', 'MYSQL_USER', 'MYSQL_PASSWORD'];

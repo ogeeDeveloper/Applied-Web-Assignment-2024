@@ -854,4 +854,23 @@ class User
             return 0;
         }
     }
+
+    public function getFarmerStatusHistory(int $farmerId): array
+    {
+        try {
+            $sql = "SELECT fsl.*, u.name as changed_by_name
+                FROM farmer_status_logs fsl
+                JOIN users u ON fsl.changed_by = u.id
+                WHERE fsl.farmer_id = :farmer_id
+                ORDER BY fsl.created_at DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['farmer_id' => $farmerId]);
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting farmer status history: " . $e->getMessage());
+            return [];
+        }
+    }
 }
