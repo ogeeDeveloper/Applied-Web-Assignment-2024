@@ -339,30 +339,30 @@ class FarmerController extends BaseController
         }
     }
 
-    public function recordHarvest(): void
-    {
-        try {
-            $this->validateAuthenticatedRequest();
+    // public function recordHarvest(): void
+    // {
+    //     try {
+    //         $this->validateAuthenticatedRequest();
 
-            $input = $this->validateInput([
-                'planting_id' => 'int',
-                'harvest_date' => 'date',
-                'quantity' => 'float',
-                'unit' => 'string',
-                'quality_grade' => 'string',
-                'storage_location' => 'string'
-            ]);
+    //         $input = $this->validateInput([
+    //             'planting_id' => 'int',
+    //             'harvest_date' => 'date',
+    //             'quantity' => 'float',
+    //             'unit' => 'string',
+    //             'quality_grade' => 'string',
+    //             'storage_location' => 'string'
+    //         ]);
 
-            $result = $this->plantingModel->recordHarvest($input);
-            $this->jsonResponse($result);
-        } catch (Exception $e) {
-            $this->logger->error("Error recording harvest: " . $e->getMessage());
-            $this->jsonResponse([
-                'success' => false,
-                'message' => 'Failed to record harvest'
-            ], 500);
-        }
-    }
+    //         $result = $this->plantingModel->recordHarvest($input);
+    //         $this->jsonResponse($result);
+    //     } catch (Exception $e) {
+    //         $this->logger->error("Error recording harvest: " . $e->getMessage());
+    //         $this->jsonResponse([
+    //             'success' => false,
+    //             'message' => 'Failed to record harvest'
+    //         ], 500);
+    //     }
+    // }
 
     private function getMonthlyStats($farmerId): array
     {
@@ -537,6 +537,262 @@ class FarmerController extends BaseController
         } catch (\PDOException $e) {
             $this->logger->error("Error fetching crop types: " . $e->getMessage());
             return [];
+        }
+    }
+
+    public function showEditCropForm(): void
+    {
+        try {
+            $this->validateAuthenticatedRequest();
+            $plantingId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+
+            if (!$plantingId) {
+                throw new Exception("Invalid planting ID");
+            }
+
+            // Get planting details
+            $stmt = $this->db->prepare("
+            SELECT p.*, ct.name as crop_name, ct.category
+            FROM plantings p
+            JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            WHERE p.planting_id = :planting_id
+            AND p.farmer_id = (
+                SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id
+            )
+        ");
+            $stmt->execute([
+                'planting_id' => $plantingId,
+                'user_id' => $_SESSION['user_id']
+            ]);
+
+            $planting = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$planting) {
+                throw new Exception("Planting not found");
+            }
+
+            // Get crop types for dropdown
+            $cropTypes = $this->getAllCropTypes();
+
+            $this->render('farmer/edit-crop', [
+                'planting' => $planting,
+                'cropTypes' => $cropTypes,
+                'currentPage' => 'manage-crops'
+            ], 'Edit Crop', 'farmer/layouts/farmer');
+        } catch (Exception $e) {
+            $this->logger->error("Error loading edit crop form: " . $e->getMessage());
+            $this->setFlashMessage('Error loading crop details', 'error');
+            $this->redirect('/farmer/manage-crops');
+        }
+    }
+
+    public function updateCrop(): void
+    {
+        try {
+            $this->validateAuthenticatedRequest();
+
+            $input = $this->validateInput([
+                'planting_id' => 'int',
+                'crop_type_id' => 'int',
+                'field_location' => 'string',
+                'area_size' => 'float',
+                'area_unit' => 'string',
+                'planting_date' => 'date',
+                'expected_harvest_date' => 'date',
+                'growing_method' => 'string',
+                'soil_preparation' => 'string',
+                'notes' => 'string'
+            ]);
+
+            $stmt = $this->db->prepare("UPDATE plantings SET
+            crop_type_id = :crop_type_id,
+            field_location = :field_location,
+            area_size = :area_size,
+            area_unit = :area_unit,
+            planting_date = :planting_date,
+            expected_harvest_date = :expected_harvest_date,
+            growing_method = :growing_method,
+            soil_preparation = :soil_preparation,
+            notes = :notes
+            WHERE planting_id = :planting_id
+            AND farmer_id = (SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id)
+        ");
+
+            $stmt->execute(array_merge($input, ['user_id' => $_SESSION['user_id']]));
+
+            $this->setFlashMessage('Crop updated successfully', 'success');
+            $this->redirect('/farmer/manage-crops');
+        } catch (Exception $e) {
+            $this->logger->error("Error updating crop: " . $e->getMessage());
+            $this->setFlashMessage('Failed to update crop', 'error');
+            $this->redirectWithInput('/farmer/edit-crop?id=' . $_POST['planting_id'], $_POST);
+        }
+    }
+
+    public function showHarvestForm(): void
+    {
+        try {
+            SessionManager::initialize();
+            $this->validateAuthenticatedRequest();
+            $this->validateRole('farmer');
+
+            $plantingId = filter_input(INPUT_GET, 'planting_id', FILTER_VALIDATE_INT);
+            if (!$plantingId) {
+                throw new Exception("Invalid planting ID");
+            }
+
+            // Get user's farmer_id
+            $stmt = $this->db->prepare("SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id");
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Log farmer details
+            $this->logger->info("Farmer details", [
+                'user_id' => $_SESSION['user_id'],
+                'farmer' => $farmer
+            ]);
+
+            if (!$farmer) {
+                throw new Exception("Farmer profile not found");
+            }
+
+            // Get planting details with crop name
+            $query = "
+            SELECT p.*, ct.name as crop_name, ct.category
+            FROM plantings p
+            JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            WHERE p.planting_id = :planting_id
+            AND p.farmer_id = :farmer_id
+        ";
+
+            $stmt = $this->db->prepare($query);
+            $params = [
+                'planting_id' => $plantingId,
+                'farmer_id' => $farmer['farmer_id']
+            ];
+
+            // Log query details
+            $this->logger->info("Executing planting query", [
+                'query' => $query,
+                'params' => $params
+            ]);
+
+            $stmt->execute($params);
+            $planting = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Log planting result
+            $this->logger->info("Planting query result", [
+                'planting' => $planting
+            ]);
+
+            if (!$planting) {
+                // Check if planting exists at all
+                $stmt = $this->db->prepare("SELECT * FROM plantings WHERE planting_id = :planting_id");
+                $stmt->execute(['planting_id' => $plantingId]);
+                $anyPlanting = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                $this->logger->error("Planting not found", [
+                    'planting_id' => $plantingId,
+                    'farmer_id' => $farmer['farmer_id'],
+                    'exists_for_other_farmer' => !empty($anyPlanting)
+                ]);
+
+                throw new Exception("Planting not found");
+            }
+
+            $data = [
+                'planting' => $planting,
+                'currentPage' => 'manage-crops'
+            ];
+
+            $this->render('farmer/record-harvest', $data, 'Record Harvest', 'farmer/layouts/farmer');
+        } catch (Exception $e) {
+            $this->logger->error("Error loading harvest form: " . $e->getMessage());
+            $this->setFlashMessage('Error loading harvest form: ' . $e->getMessage(), 'error');
+            $this->redirect('/farmer/manage-crops');
+        }
+    }
+
+    public function recordHarvest(): void
+    {
+        try {
+            $this->validateAuthenticatedRequest();
+
+            $input = $this->validateInput([
+                'planting_id' => 'int',
+                'harvest_date' => 'date',
+                'quantity' => 'float',
+                'unit' => 'string',
+                'quality_grade' => 'string',
+                'storage_location' => 'string',
+                'create_product' => 'boolean',
+                'price_per_unit' => 'float'
+            ]);
+
+            $this->db->beginTransaction();
+
+            // Record harvest
+            $stmt = $this->db->prepare("INSERT INTO harvests (
+            planting_id, harvest_date, quantity, unit,
+            quality_grade, storage_location
+        ) VALUES (
+            :planting_id, :harvest_date, :quantity, :unit,
+            :quality_grade, :storage_location
+        )");
+
+            $stmt->execute([
+                'planting_id' => $input['planting_id'],
+                'harvest_date' => $input['harvest_date'],
+                'quantity' => $input['quantity'],
+                'unit' => $input['unit'],
+                'quality_grade' => $input['quality_grade'],
+                'storage_location' => $input['storage_location']
+            ]);
+
+            $harvestId = $this->db->lastInsertId();
+
+            // Update planting status
+            $stmt = $this->db->prepare("UPDATE plantings SET status = 'harvested' WHERE planting_id = :planting_id");
+            $stmt->execute(['planting_id' => $input['planting_id']]);
+
+            // Create product if requested
+            if (!empty($input['create_product'])) {
+                $stmt = $this->db->prepare("
+                INSERT INTO products (
+                    farmer_id, harvest_id, name, category, price_per_unit,
+                    unit_type, stock_quantity, status
+                )
+                SELECT 
+                    p.farmer_id,
+                    :harvest_id,
+                    ct.name,
+                    ct.category,
+                    :price_per_unit,
+                    h.unit,
+                    h.quantity,
+                    'available'
+                FROM plantings p
+                JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+                JOIN harvests h ON h.planting_id = p.planting_id
+                WHERE p.planting_id = :planting_id
+            ");
+
+                $stmt->execute([
+                    'harvest_id' => $harvestId,
+                    'price_per_unit' => $input['price_per_unit'],
+                    'planting_id' => $input['planting_id']
+                ]);
+            }
+
+            $this->db->commit();
+            $this->setFlashMessage('Harvest recorded successfully' .
+                ($input['create_product'] ? ' and product created' : ''), 'success');
+            $this->redirect('/farmer/manage-crops');
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            $this->logger->error("Error recording harvest: " . $e->getMessage());
+            $this->setFlashMessage('Failed to record harvest', 'error');
+            $this->redirectWithInput('/farmer/record-harvest?planting_id=' . $_POST['planting_id'], $_POST);
         }
     }
 }
