@@ -7,27 +7,38 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\Planting;
 use App\Models\ChemicalUsage;
+use App\Models\Crop;
 use PDO;
 use Exception;
+use App\Utils\SessionManager;
+use App\Models\User;
 
-class FarmerController extends BaseController {
+class FarmerController extends BaseController
+{
     private $farmerModel;
     private $productModel;
     private $orderModel;
     private $plantingModel;
     private $chemicalUsageModel;
+    private $cropModel;
+    private $userModel;
 
-    public function __construct(PDO $db, $logger) {
+    public function __construct(PDO $db, $logger)
+    {
         parent::__construct($db, $logger);
         $this->farmerModel = new Farmer($db, $logger);
         $this->productModel = new Product($db, $logger);
         $this->orderModel = new Order($db, $logger);
         $this->plantingModel = new Planting($db, $logger);
         $this->chemicalUsageModel = new ChemicalUsage($db, $logger);
+        $this->cropModel = new Crop($db, $logger);
+        $this->userModel = new User($db, $logger);
     }
 
-    public function index(): void {
+    public function index(): void
+    {
         try {
+            SessionManager::initialize(); // Ensure session is active
             $this->validateAuthenticatedRequest();
             $this->validateRole('farmer');
 
@@ -40,15 +51,19 @@ class FarmerController extends BaseController {
                 throw new Exception($dashboardData['message']);
             }
         } catch (Exception $e) {
-            $this->logger->error("Error loading farmer dashboard: " . $e->getMessage());
-            $this->render('error', ['message' => 'Failed to load dashboard']);
+            $this->logger->error("Error loading farmer dashboard: " . $e->getMessage(), [
+                'session' => $_SESSION,
+                'uri' => $_SERVER['REQUEST_URI']
+            ]);
+            $this->render('error', ['message' => 'Failed to load dashboard.']);
         }
     }
 
-    public function updateProfile(): void {
+    public function updateProfile(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $input = $this->validateInput([
                 'farm_name' => 'string',
                 'location' => 'string',
@@ -75,10 +90,11 @@ class FarmerController extends BaseController {
         }
     }
 
-    public function addPlanting(): void {
+    public function addPlanting(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $input = $this->validateInput([
                 'crop_type_id' => 'int',
                 'field_location' => 'string',
@@ -103,10 +119,11 @@ class FarmerController extends BaseController {
         }
     }
 
-    public function recordChemicalUsage(): void {
+    public function recordChemicalUsage(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $input = $this->validateInput([
                 'planting_id' => 'int',
                 'chemical_name' => 'string',
@@ -128,10 +145,11 @@ class FarmerController extends BaseController {
         }
     }
 
-    public function recordHarvest(): void {
+    public function recordHarvest(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $input = $this->validateInput([
                 'planting_id' => 'int',
                 'harvest_date' => 'date',
@@ -152,7 +170,8 @@ class FarmerController extends BaseController {
         }
     }
 
-    private function getMonthlyStats($farmerId): array {
+    private function getMonthlyStats($farmerId): array
+    {
         return [
             'sales' => $this->orderModel->getMonthlyTotal($farmerId),
             'orders' => $this->orderModel->getMonthlyOrderCount($farmerId),
@@ -161,4 +180,78 @@ class FarmerController extends BaseController {
         ];
     }
 
+    public function getCrops(): array
+    {
+        try {
+            $this->validateAuthenticatedRequest();
+            return $this->cropModel->getCropsByFarmer($_SESSION['user_id']);
+        } catch (\Exception $e) {
+            $this->logger->error("Error fetching crops: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function logout(): void
+    {
+        SessionManager::destroy();
+        $this->redirect('/login', 'You have been logged out successfully');
+    }
+
+    public function accountSettings(): void
+    {
+        try {
+            $farmerId = $_SESSION['user_id'];
+            $farmer = $this->userModel->findById($farmerId);
+
+            $this->render('farmer/account-settings', [
+                'farmer' => $farmer
+            ], 'Account Settings', 'farmer/layouts/farmer');
+        } catch (Exception $e) {
+            $this->logger->error("Error loading account settings: " . $e->getMessage());
+            $this->redirect('/farmer/dashboard');
+        }
+    }
+
+    public function recordActivity(): void
+    {
+        $this->render('farmer/record-activity', [], 'Record Activity', 'farmer/layouts/farmer');
+    }
+
+    public function chemicalUsage(): void
+    {
+        try {
+            $farmerId = $_SESSION['user_id'];
+
+            // Get current plantings for dropdown
+            $plantings = $this->plantingModel->getCurrentPlantings($farmerId);
+
+            // Get chemical records
+            $chemicalRecords = $this->chemicalUsageModel->getRecentUsage($farmerId);
+
+            $this->render('farmer/chemical-usage', [
+                'plantings' => $plantings,
+                'records' => $chemicalRecords,
+                'currentPage' => 'chemical-usage'
+            ], 'Chemical Usage Records', 'farmer/layouts/farmer');
+        } catch (\Exception $e) {
+            $this->logger->error("Error loading chemical usage: " . $e->getMessage());
+            $this->setFlashMessage('Error loading chemical records', 'error');
+            $this->redirect('/farmer/dashboard');
+        }
+    }
+
+    public function manageCrops(): void
+    {
+        try {
+            $farmerId = $_SESSION['user_id'];
+            $crops = $this->cropModel->getCurrentCrops($farmerId);
+
+            $this->render('farmer/manage-crops', [
+                'crops' => $crops
+            ], 'Manage Crops', 'farmer/layouts/farmer');
+        } catch (Exception $e) {
+            $this->logger->error("Error loading crop management: " . $e->getMessage());
+            $this->redirect('/farmer/dashboard');
+        }
+    }
 }

@@ -65,8 +65,16 @@ return [
         // API Endpoints
         // 'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
     ],
+    'farmer' => [
+        'GET /farmer/dashboard' => ['FarmerController', 'index'],
+        'GET /farmer/manage-crops' => ['FarmerController', 'manageCrops'],
+        'GET /farmer/chemical-usage' => ['FarmerController', 'chemicalUsage'],
+        'GET /farmer/record-activity' => ['FarmerController', 'recordActivity'],
+        'GET /farmer/account-settings' => ['FarmerController', 'accountSettings'],
+        'POST /farmer/logout' => ['FarmerController', 'logout']
+    ],
     'protected' => [
         'GET /customer/dashboard' => ['CustomerController', 'dashboard'],
-        'GET /farmer/dashboard' => ['FarmerController', 'dashboard'],
+
     ]
 ];

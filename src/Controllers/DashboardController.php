@@ -18,14 +18,14 @@ use App\Utils\SessionManager;
 
 class DashboardController extends BaseController
 {
-    private $db;
-    private $logger;
-    private $productModel;
-    private $orderModel;
-    private $cropModel;
-    private $userModel;
-    private $systemHealth;
-    private $activityModel;
+    protected  $db;
+    protected  $logger;
+    protected  $productModel;
+    protected  $orderModel;
+    protected  $cropModel;
+    protected  $userModel;
+    protected  $systemHealth;
+    protected  $activityModel;
 
     public function __construct(PDO $db, $logger)
     {

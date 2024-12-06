@@ -27,23 +27,30 @@ class SessionManager
     {
         self::initialize();
 
-        if (
-            !isset($_SESSION['last_activity']) ||
-            (time() - $_SESSION['last_activity'] > 7200)
-        ) { // 2 hours timeout
+        if (!isset($_SESSION['last_activity']) || (time() - $_SESSION['last_activity'] > 7200)) {
             self::destroy();
 
-            // Get current URL path
             $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-            // Determine correct login page based on path
             $loginUrl = str_starts_with($currentPath, '/admin') ? '/admin/login' : '/login';
+
+            // Add redirect loop prevention
+            if (!isset($_SESSION['redirect_count'])) {
+                $_SESSION['redirect_count'] = 0;
+            }
+
+            if ($_SESSION['redirect_count'] >= 3) {
+                die('Too many redirects. Please clear cookies or contact support.');
+            }
+
+            $_SESSION['redirect_count'] += 1;
 
             header("Location: $loginUrl");
             exit;
         }
 
         $_SESSION['last_activity'] = time();
+        // Reset redirect counter
+        $_SESSION['redirect_count'] = 0;
     }
 
     public static function regenerate(): void
