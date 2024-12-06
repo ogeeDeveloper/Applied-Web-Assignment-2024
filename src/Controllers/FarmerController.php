@@ -244,14 +244,90 @@ class FarmerController extends BaseController
     {
         try {
             $farmerId = $_SESSION['user_id'];
-            $crops = $this->cropModel->getCurrentCrops($farmerId);
+            $farmerProfile = $this->farmerModel->getFarmerProfile($farmerId);
+
+            // Get all crop types for the dropdown
+            $cropTypes = $this->getAllCropTypes();
+
+            // Get current plantings
+            $plantings = $this->plantingModel->getCurrentPlantings($farmerId);
 
             $this->render('farmer/manage-crops', [
-                'crops' => $crops
+                'cropTypes' => $cropTypes,
+                'plantings' => $plantings,
+                'farmer' => $farmerProfile,
+                'currentPage' => 'manage-crops'
             ], 'Manage Crops', 'farmer/layouts/farmer');
         } catch (Exception $e) {
             $this->logger->error("Error loading crop management: " . $e->getMessage());
+            $this->setFlashMessage('Error loading crops', 'error');
             $this->redirect('/farmer/dashboard');
+        }
+    }
+
+    public function addCrop(): void
+    {
+        try {
+            $this->validateAuthenticatedRequest();
+            $userId = $_SESSION['user_id'];
+
+            // Get farmer_id from farmer_profiles
+            $stmt = $this->db->prepare("SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id");
+            $stmt->execute(['user_id' => $userId]);
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$farmer) {
+                throw new Exception("Farmer profile not found");
+            }
+
+            $input = $this->validateInput([
+                'crop_type_id' => 'int',
+                'field_location' => 'string',
+                'area_size' => 'float',
+                'area_unit' => 'string',
+                'planting_date' => 'date',
+                'expected_harvest_date' => 'date',
+                'growing_method' => 'string',
+                'soil_preparation' => 'string',
+                'notes' => 'string'
+            ]);
+
+            $data = array_merge($input, [
+                'farmer_id' => $farmer['farmer_id'],
+                'status' => 'planted'
+            ]);
+
+            $stmt = $this->db->prepare("INSERT INTO plantings (
+            farmer_id, crop_type_id, field_location, area_size,
+            area_unit, planting_date, expected_harvest_date,
+            growing_method, soil_preparation, status, notes
+        ) VALUES (
+            :farmer_id, :crop_type_id, :field_location, :area_size,
+            :area_unit, :planting_date, :expected_harvest_date,
+            :growing_method, :soil_preparation, :status, :notes
+        )");
+
+            $stmt->execute($data);
+
+            $this->setFlashMessage('Crop added successfully', 'success');
+            $this->redirect('/farmer/manage-crops');
+        } catch (Exception $e) {
+            $this->logger->error("Error adding crop: " . $e->getMessage());
+            $this->setFlashMessage('Failed to add crop', 'error');
+            $this->redirectWithInput('/farmer/manage-crops', $_POST);
+        }
+    }
+
+    private function getAllCropTypes(): array
+    {
+        try {
+            $sql = "SELECT crop_id, name, category FROM crop_types";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error fetching crop types: " . $e->getMessage());
+            return [];
         }
     }
 }

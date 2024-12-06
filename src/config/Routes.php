@@ -71,7 +71,10 @@ return [
         'GET /farmer/chemical-usage' => ['FarmerController', 'chemicalUsage'],
         'GET /farmer/record-activity' => ['FarmerController', 'recordActivity'],
         'GET /farmer/account-settings' => ['FarmerController', 'accountSettings'],
-        'POST /farmer/logout' => ['FarmerController', 'logout']
+        'POST /farmer/logout' => ['FarmerController', 'logout'],
+        'POST /farmer/add-crop' => ['FarmerController', 'addCrop'],
+        'GET /farmer/record-harvest' => ['FarmerController', 'showHarvestForm'],
+        'POST /farmer/record-harvest' => ['FarmerController', 'recordHarvest'],
     ],
     'protected' => [
         'GET /customer/dashboard' => ['CustomerController', 'dashboard'],

@@ -55,6 +55,12 @@
                                     <span class="name">Account Settings</span>
                                 </a>
                             </li>
+                            <li class="dashboard__nav-item-link <?php echo $currentPage === 'logout' ? 'active' : ''; ?>">
+                                <a href="/farmer/logout" class="font-body--lg-400">
+                                    <span class="icon">⚙️</span>
+                                    <span class="name">Logout</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                 </div>
