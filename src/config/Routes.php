@@ -75,6 +75,7 @@ return [
         'POST /farmer/add-crop' => ['FarmerController', 'addCrop'],
         'GET /farmer/record-harvest' => ['FarmerController', 'showHarvestForm'],
         'POST /farmer/record-harvest' => ['FarmerController', 'recordHarvest'],
+        'POST /farmer/record-chemical' => ['FarmerController', 'recordChemicalUsage'],
     ],
     'protected' => [
         'GET /customer/dashboard' => ['CustomerController', 'dashboard'],

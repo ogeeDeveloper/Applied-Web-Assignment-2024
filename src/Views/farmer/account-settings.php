@@ -63,9 +63,9 @@ $title = "Account Settings | AgriFarm";
                 </div>
 
                 <!-- Password Change Section -->
-                <div class="password-section mt-4">
-                    <h2>Change Password</h2>
-                    <form method="POST" action="/farmer/change-password" class="settings-form">
+                <div class="dashboard-card mb-4">
+                    <h2 class="dashboard__card-title font-body--xl-500">Change Password</h2>
+                    <form method="POST" action="/farmer/change-password" class="dashboard__form">
                         <div class="form-group">
                             <label for="currentPassword">Current Password</label>
                             <input type="password" id="currentPassword" name="current_password" class="form-control" required>
@@ -83,16 +83,14 @@ $title = "Account Settings | AgriFarm";
                 </div>
 
                 <!-- Delete Account Section -->
-                <div class="danger-zone mt-4">
-                    <h2>Danger Zone</h2>
-                    <div class="card border-danger">
-                        <div class="card-body">
-                            <h5 class="card-title text-danger">Delete Account</h5>
-                            <p class="card-text">Once you delete your account, there is no going back. Please be certain.</p>
-                            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteAccountModal">
-                                Delete Account
-                            </button>
-                        </div>
+                <div class="dashboard-card border-danger">
+                    <h2 class="dashboard__card-title font-body--xl-500 text-danger">Danger Zone</h2>
+                    <div class="card-body">
+                        <h5 class="card-title text-danger">Delete Account</h5>
+                        <p class="card-text">Once you delete your account, there is no going back. Please be certain.</p>
+                        <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#deleteAccountModal">
+                            Delete Account
+                        </button>
                     </div>
                 </div>
             </div>
@@ -112,7 +110,7 @@ $title = "Account Settings | AgriFarm";
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete your account? This action cannot be undone.</p>
-                <form method="POST" action="/farmer/delete-account">
+                <form id="deleteAccountForm" method="POST" action="/farmer/delete-account">
                     <div class="form-group">
                         <label for="deleteConfirm">Type "DELETE" to confirm</label>
                         <input type="text" id="deleteConfirm" name="delete_confirm" class="form-control" required>

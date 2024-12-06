@@ -124,6 +124,16 @@ class FarmerController extends BaseController
         try {
             $this->validateAuthenticatedRequest();
 
+            // Get farmer_id
+            $userId = $_SESSION['user_id'];
+            $stmt = $this->db->prepare("SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id");
+            $stmt->execute(['user_id' => $userId]);
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$farmer) {
+                throw new Exception("Farmer profile not found");
+            }
+
             $input = $this->validateInput([
                 'planting_id' => 'int',
                 'chemical_name' => 'string',
@@ -131,17 +141,32 @@ class FarmerController extends BaseController
                 'date_applied' => 'date',
                 'amount_used' => 'float',
                 'unit_of_measurement' => 'string',
-                'safety_period_days' => 'int'
+                'safety_period_days' => 'int',
+                'purpose' => 'string',
+                'weather_conditions' => 'string'
             ]);
 
-            $result = $this->chemicalUsageModel->create($input);
-            $this->jsonResponse($result);
+            $sql = "INSERT INTO chemical_usage (
+            planting_id, chemical_name, chemical_type,
+            date_applied, purpose, amount_used,
+            unit_of_measurement, safety_period_days,
+            weather_conditions
+        ) VALUES (
+            :planting_id, :chemical_name, :chemical_type,
+            :date_applied, :purpose, :amount_used,
+            :unit_of_measurement, :safety_period_days,
+            :weather_conditions
+        )";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($input);
+
+            $this->setFlashMessage('Chemical usage recorded successfully', 'success');
+            $this->redirect('/farmer/chemical-usage');
         } catch (Exception $e) {
             $this->logger->error("Error recording chemical usage: " . $e->getMessage());
-            $this->jsonResponse([
-                'success' => false,
-                'message' => 'Failed to record chemical usage'
-            ], 500);
+            $this->setFlashMessage('Failed to record chemical usage', 'error');
+            $this->redirectWithInput('/farmer/chemical-usage', $_POST);
         }
     }
 
@@ -200,14 +225,29 @@ class FarmerController extends BaseController
     public function accountSettings(): void
     {
         try {
-            $farmerId = $_SESSION['user_id'];
-            $farmer = $this->userModel->findById($farmerId);
+            $userId = $_SESSION['user_id'];
+
+            // Get farmer profile data
+            $sql = "SELECT u.*, fp.* 
+                FROM users u 
+                JOIN farmer_profiles fp ON u.id = fp.user_id 
+                WHERE u.id = :user_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['user_id' => $userId]);
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$farmer) {
+                throw new Exception("Farmer profile not found");
+            }
 
             $this->render('farmer/account-settings', [
-                'farmer' => $farmer
+                'farmer' => $farmer,
+                'currentPage' => 'account-settings'
             ], 'Account Settings', 'farmer/layouts/farmer');
         } catch (Exception $e) {
             $this->logger->error("Error loading account settings: " . $e->getMessage());
+            $this->setFlashMessage('Error loading account settings', 'error');
             $this->redirect('/farmer/dashboard');
         }
     }
