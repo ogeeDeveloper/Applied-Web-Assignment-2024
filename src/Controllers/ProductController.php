@@ -221,4 +221,67 @@ class ProductController extends BaseController {
         }
     }
 
+    public function getPopularProducts(int $limit = 8): array
+    {
+        try {
+            $this->logger->info("Fetching popular products for home page");
+
+            $popularProducts = $this->productModel->getPopularProducts($limit);
+
+            // Format the products for display
+            $formattedProducts = array_map(function($product) {
+                return [
+                    'id' => $product['product_id'],
+                    'name' => $product['name'],
+                    'price' => $product['price_per_unit'],
+                    'formatted_price' => 'JMD ' . number_format($product['price_per_unit'], 2),
+                    'unit_type' => $product['unit_type'],
+                    'farmer_name' => $product['farm_name'],
+                    'location' => $product['location'],
+                    'is_organic' => (bool)$product['organic_certified'],
+                    'stock_status' => $this->getStockStatusLabel($product['stock_quantity'], $product['low_stock_alert_threshold']),
+                    'category' => $product['category'],
+                    'description' => $product['description'],
+                    'total_orders' => $product['order_count'] ?? 0,
+                    'quantity_sold' => $product['total_quantity_sold'] ?? 0
+                ];
+            }, $popularProducts);
+
+            return [
+                'success' => true,
+                'data' => $formattedProducts
+            ];
+
+        } catch (Exception $e) {
+            $this->logger->error("Error fetching popular products: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => 'Failed to fetch popular products',
+                'data' => []
+            ];
+        }
+    }
+
+    private function getStockStatusLabel(int $currentStock, int $threshold): array
+    {
+        if ($currentStock <= 0) {
+            return [
+                'status' => 'out_of_stock',
+                'label' => 'Out of Stock',
+                'class' => 'badge-danger'
+            ];
+        } elseif ($currentStock <= $threshold) {
+            return [
+                'status' => 'low_stock',
+                'label' => 'Low Stock',
+                'class' => 'badge-warning'
+            ];
+        }
+        return [
+            'status' => 'in_stock',
+            'label' => 'In Stock',
+            'class' => 'badge-success'
+        ];
+    }
+
 }
