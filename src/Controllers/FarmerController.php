@@ -42,11 +42,36 @@ class FarmerController extends BaseController
             $this->validateAuthenticatedRequest();
             $this->validateRole('farmer');
 
+            // Get farmer profile info
+            $userId = $_SESSION['user_id'];
+            $stmt = $this->db->prepare("SELECT u.*, fp.*
+            FROM users u
+            JOIN farmer_profiles fp ON u.id = fp.user_id
+            WHERE u.id = :user_id");
+            $stmt->execute(['user_id' => $userId]);
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Get dashboard data from DashboardController
             $dashboardController = new DashboardController($this->db, $this->logger);
             $dashboardData = $dashboardController->farmerDashboard();
 
             if ($dashboardData['success']) {
-                $this->render('farmer/dashboard', $dashboardData['data']);
+                // Combine farmer profile with dashboard data
+                $data = array_merge(
+                    $dashboardData['data'],
+                    [
+                        'farmer' => $farmer,
+                        'stats' => [
+                            'activeCrops' => count($dashboardData['data']['currentCrops']),
+                            'recentHarvest' => $this->getRecentHarvestSummary($dashboardData['data']['upcomingHarvests']),
+                            'chemicalsUsed' => count($dashboardData['data']['activeProducts'])
+                        ],
+                        'activities' => $this->getFormattedActivities($dashboardData['data']),
+                        'currentPage' => 'dashboard'
+                    ]
+                );
+
+                $this->render('farmer/dashboard', $data, 'Farmer Dashboard', 'farmer/layouts/farmer');
             } else {
                 throw new Exception($dashboardData['message']);
             }
@@ -57,6 +82,150 @@ class FarmerController extends BaseController
             ]);
             $this->render('error', ['message' => 'Failed to load dashboard.']);
         }
+    }
+
+    private function getRecentHarvestSummary(array $harvests): string
+    {
+        try {
+            $stmt = $this->db->prepare("
+            SELECT SUM(h.quantity) as total, h.unit 
+            FROM harvests h
+            JOIN plantings p ON h.planting_id = p.planting_id
+            WHERE p.farmer_id = (
+                SELECT farmer_id FROM farmer_profiles 
+                WHERE user_id = :user_id
+            )
+            AND h.harvest_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+            GROUP BY h.unit
+            ORDER BY total DESC
+            LIMIT 1
+        ");
+
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($result && $result['total']) {
+                return $result['total'] . ' ' . $result['unit'];
+            }
+
+            return '0 Tons';
+        } catch (\PDOException $e) {
+            $this->logger->error("Error getting recent harvest summary: " . $e->getMessage());
+            return '0 Tons';
+        }
+    }
+
+
+    private function getFormattedActivities(array $dashboardData): array
+    {
+        $activities = [];
+
+        // Add crop activities
+        foreach ($dashboardData['currentCrops'] as $crop) {
+            $activities[] = [
+                'date' => $crop['planting_date'],
+                'activity' => 'New Crop Planted',
+                'details' => $crop['product_name'] . ' in ' . $crop['field_location']
+            ];
+        }
+
+        // Add order activities
+        foreach ($dashboardData['recentOrders'] as $order) {
+            $activities[] = [
+                'date' => $order['ordered_date'],
+                'activity' => 'Order Received',
+                'details' => 'Order #' . $order['order_id']
+            ];
+        }
+
+        // Sort activities by date, most recent first
+        usort($activities, function ($a, $b) {
+            return strtotime($b['date']) - strtotime($a['date']);
+        });
+
+        // Return only the 5 most recent activities
+        return array_slice($activities, 0, 5);
+    }
+
+    private function getActiveCropsCount(int $farmerId): int
+    {
+        $stmt = $this->db->prepare("
+        SELECT COUNT(*) FROM plantings 
+        WHERE farmer_id = :farmer_id 
+        AND status IN ('planted', 'growing')
+    ");
+        $stmt->execute(['farmer_id' => $farmerId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    private function getRecentHarvestTotal(int $farmerId): string
+    {
+        $stmt = $this->db->prepare("
+        SELECT COALESCE(SUM(h.quantity), 0) as total, h.unit 
+        FROM harvests h
+        JOIN plantings p ON h.planting_id = p.planting_id
+        WHERE p.farmer_id = :farmer_id
+        AND h.harvest_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+        GROUP BY h.unit
+        ORDER BY total DESC
+        LIMIT 1
+    ");
+        $stmt->execute(['farmer_id' => $farmerId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $result ? $result['total'] . ' ' . $result['unit'] : '0';
+    }
+
+    private function getChemicalsUsedCount(int $farmerId): int
+    {
+        $stmt = $this->db->prepare("
+        SELECT COUNT(*) FROM chemical_usage cu
+        JOIN plantings p ON cu.planting_id = p.planting_id
+        WHERE p.farmer_id = :farmer_id
+        AND cu.date_applied >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+    ");
+        $stmt->execute(['farmer_id' => $farmerId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    private function getRecentActivities(int $farmerId): array
+    {
+        $stmt = $this->db->prepare("
+        (SELECT 
+            h.harvest_date as date,
+            'Harvest Recorded' as activity,
+            CONCAT(h.quantity, ' ', h.unit, ' of ', ct.name) as details
+        FROM harvests h
+        JOIN plantings p ON h.planting_id = p.planting_id
+        JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+        WHERE p.farmer_id = :farmer_id)
+        
+        UNION ALL
+        
+        (SELECT 
+            cu.date_applied as date,
+            'Chemical Applied' as activity,
+            CONCAT(cu.chemical_name, ' on ', ct.name) as details
+        FROM chemical_usage cu
+        JOIN plantings p ON cu.planting_id = p.planting_id
+        JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+        WHERE p.farmer_id = :farmer_id)
+        
+        UNION ALL
+        
+        (SELECT 
+            p.planting_date as date,
+            'New Crop Planted' as activity,
+            CONCAT(ct.name, ' in ', p.field_location) as details
+        FROM plantings p
+        JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+        WHERE p.farmer_id = :farmer_id)
+        
+        ORDER BY date DESC
+        LIMIT 5
+    ");
+        $stmt->execute(['farmer_id' => $farmerId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function updateProfile(): void
