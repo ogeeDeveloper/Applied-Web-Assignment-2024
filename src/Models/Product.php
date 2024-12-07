@@ -31,6 +31,10 @@ class Product
      *
      * @throws \Exception If an error occurs during the file upload process.
      */
+
+    
+    
+
     public function create(array $data, array $files = null): array
     {
         try {

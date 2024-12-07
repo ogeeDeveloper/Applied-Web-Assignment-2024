@@ -15,14 +15,16 @@ return [
         'GET /login' => ['AuthController', 'loginForm'],
         'POST /login' => ['AuthController', 'login'],
         'GET /register' => ['AuthController', 'customerRegistrationForm'],
-        'POST /register' => ['AuthController', 'register'],
+        'POST /api/auth/customers/register' => ['AuthController', 'register'],
         'POST /logout' => ['AuthController', 'logout'],
 
         // Farmer auth routes
         'GET /register/farmer' => ['AuthController', 'farmerRegistrationForm'],
-        'POST /register/farmer' => ['AuthController', 'register'],
+        // 'POST /farmer/register' => ['AuthController', 'farmerRegister'],
+        'POST /farmer/register' => ['AuthController', 'register'],
         'GET /farmer/login' => ['AuthController', 'farmerLoginForm'],
-        'POST /farmer/login' => ['AuthController', 'login'],
+        'POST /api/auth/login' => ['AuthController', 'apiLogin'],
+        // 'POST /farmer/login' => ['AuthController', 'login'],
 
         // Add admin auth routes here
         'GET /admin/login' => ['AdminAuthController', 'showLoginForm'],
@@ -56,6 +58,7 @@ return [
         'POST /admin/farmers/approve' => ['AdminController', 'approveFarmer'],
         'POST /admin/farmers/reject' => ['AdminController', 'rejectFarmer'],
         'POST /admin/farmers/suspend' => ['AdminController', 'suspendFarmer'],
+        'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
 
         // System
         'GET /admin/system' => ['AdminController', 'systemHealth'],
@@ -63,11 +66,24 @@ return [
         'GET /admin/system/metrics' => ['AdminController', 'systemMetrics'],
 
         // API Endpoints
-        'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
+        // 'GET /admin/api/farmers/{id}' => ['AdminController', 'getFarmerDetails'],
+    ],
+    'farmer' => [
+        'GET /farmer/dashboard' => ['FarmerController', 'index'],
+        'GET /farmer/manage-crops' => ['FarmerController', 'manageCrops'],
+        'GET /farmer/chemical-usage' => ['FarmerController', 'chemicalUsage'],
+        'GET /farmer/record-activity' => ['FarmerController', 'recordActivity'],
+        'GET /farmer/account-settings' => ['FarmerController', 'accountSettings'],
+        'POST /farmer/logout' => ['FarmerController', 'logout'],
+        'POST /farmer/add-crop' => ['FarmerController', 'addCrop'],
+        'POST /farmer/record-chemical' => ['FarmerController', 'recordChemicalUsage'],
+        'GET /farmer/edit-crop' => ['FarmerController', 'showEditCropForm'],
+        'POST /farmer/edit-crop' => ['FarmerController', 'updateCrop'],
+        'GET /farmer/record-harvest' => ['FarmerController', 'showHarvestForm'],
+        'POST /farmer/record-harvest' => ['FarmerController', 'recordHarvest'],
     ],
     'protected' => [
         'GET /customer/dashboard' => ['CustomerController', 'dashboard'],
         'GET /farmer/dashboard' => ['FarmerController', 'dashboard'],
-        'GET /customer/product-details' => ['CustomerController', 'productDetails']
     ]
 ];

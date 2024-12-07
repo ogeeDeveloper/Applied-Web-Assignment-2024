@@ -223,13 +223,4 @@ class ProductController extends BaseController {
         }
     }
 
-
-    public function productdetail() {
-        // $result = $this->productModel->getProductDetails($id);
-
-        $this->render('products/product_details');
-    }
-
-    
 }
-

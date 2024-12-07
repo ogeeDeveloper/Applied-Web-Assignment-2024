@@ -39,6 +39,9 @@ class BaseController
         // Set page title
         $pageTitle = $pageTitle ?? 'AgriKonnect';
 
+        // Get current page for sidebar active state
+        $currentPage = basename($view);
+
         // Include the layout with the content
         $layoutPath = APP_ROOT . "/src/Views/{$layout}.php";
         if (!file_exists($layoutPath)) {
@@ -102,13 +105,16 @@ class BaseController
      */
     protected function validateRole(string $requiredRole): void
     {
-        if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== $requiredRole) {
-            $this->logger->warning("Unauthorized role access attempt", [
-                'required' => $requiredRole,
-                'actual' => $_SESSION['user_role'] ?? 'none'
+        $currentRole = strtolower($_SESSION['user_role'] ?? 'none');
+        $requiredRole = strtolower($requiredRole);
+
+        if ($currentRole !== $requiredRole) {
+            $this->logger->warning("Role mismatch", [
+                'required_role' => $requiredRole,
+                'current_role' => $currentRole,
+                'session' => $_SESSION
             ]);
-            $this->redirect($this->getLoginUrlForRole($requiredRole), 'Unauthorized access', 'error');
-            exit;
+            throw new Exception('Unauthorized role access', 403);
         }
     }
 

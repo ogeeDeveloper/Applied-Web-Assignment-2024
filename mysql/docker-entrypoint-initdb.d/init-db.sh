@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+
 
 # Substitute environment variables into the SQL file and save it to a temporary file
 temp_init_sql=$(mktemp)
