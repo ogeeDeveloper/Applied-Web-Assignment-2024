@@ -12,4 +12,11 @@ class HomeController extends BaseController {
         // Render the view
         $this->render('home.view', $data, 'Welcome to AgriKonnect');
     }
+
+    public function about() {
+        // $result = $this->productModel->getProductDetails($id);
+
+        $this->render('about.view');
+    }
+
 }

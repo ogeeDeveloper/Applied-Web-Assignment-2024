@@ -93,6 +93,8 @@ class ProductController extends BaseController {
         try {
             $this->validateAuthenticatedRequest();
             $farmerId = $_SESSION['user_id'];
+
+
             
             $result = $this->productModel->getActiveFarmerProducts($farmerId);
             $this->jsonResponse([
@@ -221,4 +223,13 @@ class ProductController extends BaseController {
         }
     }
 
+
+    public function productdetail() {
+        // $result = $this->productModel->getProductDetails($id);
+
+        $this->render('products/product_details');
+    }
+
+    
 }
+

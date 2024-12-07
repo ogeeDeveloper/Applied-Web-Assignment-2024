@@ -157,46 +157,11 @@ $paymentPartners = [
     </div>
 </footer>
 
-<!-- Newsletter Modal -->
-<?php if (!isset($_COOKIE['newsletter_dismissed'])): ?>
-<div class="modal fade newsletter-popup" id="newsletter" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body">
-                <div class="row newsletter-popup__content">
-                    <div class="col-lg-5">
-                        <div class="newsletter-popup__img-wrapper">
-                            <img src="/images/newsletter-bg.jpg" alt="Subscribe to our newsletter" />
-                        </div>
-                    </div>
-                    <div class="col-lg-7">
-                        <div class="newsletter-popup__text-content">
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            <h5 class="font-title--xl">Subscribe to Our Newsletter</h5>
-                            <p class="font-body--lg">
-                                Subscribe to our newsletter and save <span>20%</span> on your first order with our discount code!
-                            </p>
 
-                            <form action="/newsletter/subscribe" method="POST" id="newsletterForm">
-                                <div class="contact-mail">
-                                    <input type="email" name="email" placeholder="Enter your email" required />
-                                    <button type="submit" class="button button--md">Subscribe</button>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="doNotShowNewsletter" />
-                                    <label class="form-check-label font-body--md-400" for="doNotShowNewsletter">
-                                        Do not show this window again
-                                    </label>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
-<?php endif; ?>
+// <?php ?>
 
 <!-- Core Scripts -->
 <script src="/lib/js/jquery.min.js"></script>

@@ -18,7 +18,8 @@ if (!defined('APP_ROOT')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? $pageTitle . ' - AgriKonnect' : 'AgriKonnect'; ?></title>
-    <link rel="icon" type="image/png" href="images/favicon/favicon-16x16.png" />
+   
+   / <link rel="icon" type="image/png" href="images/favicon/favicon-16x16.png" /> 
 
     <?php echo AssetsHelper::loadCSS(
         [
@@ -43,7 +44,7 @@ if (!defined('APP_ROOT')) {
             <div class="container">
                 <div class="header__top-content">
                     <div class="header__top-left">
-                        <span>Location: AgriKonnect, Jamaica</span>
+                        <span>Location: Kingston 10, Jamaica</span>
                     </div>
                     <div class="header__top-right">
                         <div class="header__in">

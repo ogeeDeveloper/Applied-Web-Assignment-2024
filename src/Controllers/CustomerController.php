@@ -211,4 +211,10 @@ class CustomerController extends BaseController {
             ], 500);
         }
     }
+
+    public function productDetails(
+        
+        $request): void {
+
+    }
 }

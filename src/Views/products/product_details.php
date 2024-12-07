@@ -3,19 +3,15 @@
 $desktopBanners = [
     [
         'image' => '/images/banner/banner-lg-03.jpg', 
-        'title' => 'Fresh &amp; Healthy Organic Food',
         'sale' => '30% off',
-        'description' => 'Free shipping on all your order.',
         'link' => '#',
     ],
-    
-
 ];
 
 $smallerBanners = [
     [
         'image' => '/images/banner/banner-sm-05.png',
-        'saleTitle' => 'Summer Sale',
+        
         'saleAmount' => '75% off',
         'description' => 'Only Fruit &amp; Vegetable',
         'link' => '#',
@@ -23,16 +19,14 @@ $smallerBanners = [
     [
         'image' => '/images/banner/banner-sm-04.png',
         'saleTitle' => 'Best Deal',
-        'saleAmount' => 'Special Products Deal of the Month',
+        
         'description' => '',
         'link' => '#',
     ]
 ];
 
-
 ?>
 
-<section class="banner banner--01">
     <div class="container">
         <!-- Desktop Version -->
         <div class="banner__wrapper row">
@@ -46,12 +40,12 @@ $smallerBanners = [
 
                                     <div class="banner__wrapper-text">
                                         <h2 class="font-title--xl">
-                                            <?php echo $banner['title']; ?>
+                                            
                                         </h2>
                                         <div class="sale-off">
-                                            <h5 class="font-body--xxl-500">Sale up to <span><?php echo $banner['sale']; ?></span></h5>
+                                           
                                             <p class="font-body--md">
-                                                <?php echo $banner['description']; ?>
+                                              
                                             </p>
                                         </div>
                                         <a href="<?php echo $banner['link']; ?>" class="button button--md">
@@ -80,8 +74,8 @@ $smallerBanners = [
                             <img src="<?php echo $smallBanner['image']; ?>" alt="banner">
 
                             <div class="banner__wrapper-text">
-                                <h5 class="font-body--md-500"><?php echo $smallBanner['saleTitle']; ?></h5>
-                                <h2 class="font-title--sm"><?php echo $smallBanner['saleAmount']; ?></h2>
+                                
+                                
                                 <p class="font-body--md-400"><?php echo $smallBanner['description']; ?></p>
                                 <a href="<?php echo $smallBanner['link']; ?>" class="button button--md">
                                     Shop now
@@ -101,13 +95,11 @@ $smallerBanners = [
         
         <!-- Mobile Version -->
     </div>
-    
-    
-    <section class="popular-categories section section--md">
+
         
     <div class="container">
         <div class="section__head">
-            <h2 class="section--title-one font-title--sm">Popular Categories</h2>
+            
             <a href="shop-01.html">
                 View All
                 <span>
@@ -129,8 +121,7 @@ $smallerBanners = [
                     </svg>
                 </span>
                 <div class="cards-ship__item-process-info">
-                    <h2 class="font-body--lg-600">Free Shipping</h2>
-                    <p class="font-body--md-400">Free shipping on all your order</p>
+                  
                 </div>
             </div>
             <!-- Customer Support -->
@@ -164,10 +155,7 @@ $smallerBanners = [
                         <path d="M37.3959 9.43014C37.3959 9.27818 37.3622 9.12621 37.2946 8.98269C37.1595 8.69565 36.8978 8.50148 36.6108 8.44238L19.4137 0.101309C19.1351 -0.0337695 18.8058 -0.0337695 18.5272 0.101309L1.16124 8.51836C0.823545 8.67877 0.604043 9.01646 0.587158 9.39637V9.40481C0.587158 9.41325 0.587158 9.4217 0.587158 9.43858V30.5614C0.587158 30.9498 0.80666 31.3043 1.16124 31.4732L18.5272 39.8903C18.5357 39.8903 18.5357 39.8903 18.5441 39.8987C18.5694 39.9071 18.5948 39.9156 18.6201 39.9325C18.6285 39.9325 18.637 39.9409 18.6539 39.9409C18.6792 39.9493 18.7045 39.9578 18.7298 39.9662C18.7383 39.9662 18.7467 39.9747 18.7552 39.9747C18.7805 39.9831 18.8143 39.9831 18.8396 39.9916C18.848 39.9916 18.8565 39.9916 18.8649 39.9916C18.8987 39.9916 18.9409 40 18.9747 40C19.0084 40 19.0506 40 19.0844 39.9916C19.0929 39.9916 19.1013 39.9916 19.1097 39.9916C19.1351 39.9916 19.1688 39.9831 19.1942 39.9747C19.2026 39.9747 19.211 39.9662 19.2195 39.9662C19.2448 39.9578 19.2701 39.9493 19.2955 39.9409C19.3039 39.9409 19.3124 39.9325 19.3292 39.9325C19.3546 39.924 19.3799 39.9156 19.4052 39.8987C19.4137 39.8987 19.4137 39.8987 19.4221 39.8903L36.8387 31.4479C37.1849 31.279 37.4128 30.9244 37.4128 30.5361V9.45547C37.3959 9.44702 37.3959 9.43858 37.3959 9.43014ZM18.9662 2.13592L34.0274 9.43858L28.4808 12.1317L13.4196 4.82904L18.9662 2.13592ZM18.9662 16.7412L3.90501 9.43858L11.0979 5.95188L26.1591 13.2545L18.9662 16.7412ZM2.61333 11.068L17.9531 18.5057V37.3575L2.61333 29.9198V11.068ZM19.9793 37.3575V18.5057L27.1807 15.0106V19.9409C27.1807 20.4981 27.6365 20.954 28.1937 20.954C28.7509 20.954 29.2068 20.4981 29.2068 19.9409V14.0228L35.3698 11.0342V29.886L19.9793 37.3575Z" fill="#00B307"></path>
                     </svg>
                 </span>
-                <div class="cards-ship__item-process-info">
-                    <h2 class="font-body--lg-600">Money-Back Guarantee</h2>
-                    <p class="font-body--md-400">30 Days Money-Back Guarantee</p>
-                </div>
+                
             </div>
         </div>
     </div>
@@ -201,7 +189,6 @@ $smallerBanners = [
     ];
     ?>
 
-
     <div class="container">
         <!-- Popular Products Loop -->
         <div class="popular-products__wrapper">
@@ -209,8 +196,8 @@ $smallerBanners = [
                 <?php foreach ($popularProducts as $product): ?>
                     <div class="cards-md">
                         <div class="cards-md__img-wrapper">
-                            <a href="product-details.php?id=<?= $product['id']; ?>">
-                            <img src="<?php echo $product['image_url']; ?>" alt="img">
+                            <a href="product_details.php?id=<?= $product['id']; ?>">
+                            <img src="<?php echo $product['image_url']; ?>" alt="img-01">
                             </a>
 
                             <div class="cards-md__favs-list">
