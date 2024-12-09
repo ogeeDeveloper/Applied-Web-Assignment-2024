@@ -30,3 +30,6 @@ Thumbs.db
 
 # OS generated files
 .DS_Store
+
+/storage/uploads/*
+!/storage/uploads/.gitkeep

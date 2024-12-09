@@ -12,6 +12,7 @@ use PDO;
 use Exception;
 use App\Utils\SessionManager;
 use App\Models\User;
+use App\Models\MediaManager;
 
 class FarmerController extends BaseController
 {
@@ -22,6 +23,7 @@ class FarmerController extends BaseController
     private $chemicalUsageModel;
     private $cropModel;
     private $userModel;
+    private MediaManager $mediaManager;
 
     public function __construct(PDO $db, $logger)
     {
@@ -33,6 +35,7 @@ class FarmerController extends BaseController
         $this->chemicalUsageModel = new ChemicalUsage($db, $logger);
         $this->cropModel = new Crop($db, $logger);
         $this->userModel = new User($db, $logger);
+        $this->mediaManager = new MediaManager($db, $logger);
     }
 
     public function index(): void
@@ -807,11 +810,89 @@ class FarmerController extends BaseController
         }
     }
 
+    /**
+     * Handle product image upload during harvest recording
+     */
+    private function handleProductImages(int $productId, array $files): array
+    {
+        try {
+            $this->logger->info("Starting product image handling", [
+                'product_id' => $productId,
+                'files' => $files
+            ]);
+
+            if (empty($files['product_images']) || empty($files['product_images']['tmp_name'][0])) {
+                throw new Exception("No images were uploaded");
+            }
+
+            $results = [];
+            foreach ($files['product_images']['tmp_name'] as $key => $tmpName) {
+                if ($files['product_images']['error'][$key] !== UPLOAD_ERR_OK) {
+                    throw new Exception("Upload error for image {$key}: " .
+                        $this->getUploadErrorMessage($files['product_images']['error'][$key]));
+                }
+
+                $imageFile = [
+                    'name' => $files['product_images']['name'][$key],
+                    'type' => $files['product_images']['type'][$key],
+                    'tmp_name' => $tmpName,
+                    'error' => $files['product_images']['error'][$key],
+                    'size' => $files['product_images']['size'][$key]
+                ];
+
+                $this->logger->info("Processing image", ['image' => $imageFile]);
+
+                $uploadResult = $this->mediaManager->uploadFile($imageFile, 'product', $productId);
+                if (!$uploadResult['success']) {
+                    throw new Exception("Failed to upload image {$key}: " . ($uploadResult['message'] ?? 'Unknown error'));
+                }
+
+                $results[] = $uploadResult;
+            }
+
+            return [
+                'success' => true,
+                'results' => $results
+            ];
+        } catch (Exception $e) {
+            $this->logger->error("Product image handling error: " . $e->getMessage(), [
+                'product_id' => $productId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    private function getUploadErrorMessage(int $errorCode): string
+    {
+        return match ($errorCode) {
+            UPLOAD_ERR_INI_SIZE => "The uploaded file exceeds the upload_max_filesize directive",
+            UPLOAD_ERR_FORM_SIZE => "The uploaded file exceeds the MAX_FILE_SIZE directive",
+            UPLOAD_ERR_PARTIAL => "The uploaded file was only partially uploaded",
+            UPLOAD_ERR_NO_FILE => "No file was uploaded",
+            UPLOAD_ERR_NO_TMP_DIR => "Missing a temporary folder",
+            UPLOAD_ERR_CANT_WRITE => "Failed to write file to disk",
+            UPLOAD_ERR_EXTENSION => "A PHP extension stopped the file upload",
+            default => "Unknown upload error: " . $errorCode
+        };
+    }
+
     public function recordHarvest(): void
     {
         try {
             $this->validateAuthenticatedRequest();
 
+            // Debug logging of incoming request
+            $this->logger->info("Form submission received", [
+                'post' => $_POST,
+                'files' => $_FILES,
+                'request' => $_SERVER['REQUEST_METHOD']
+            ]);
+
+            // Validate input
             $input = $this->validateInput([
                 'planting_id' => 'int',
                 'harvest_date' => 'date',
@@ -825,14 +906,56 @@ class FarmerController extends BaseController
 
             $this->db->beginTransaction();
 
+            // Get farmer_id for the logged-in user
+            $stmt = $this->db->prepare("
+            SELECT fp.farmer_id, fp.farm_name 
+            FROM farmer_profiles fp 
+            WHERE fp.user_id = :user_id
+        ");
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$farmer) {
+                throw new Exception("Farmer profile not found");
+            }
+
+            // Verify planting ownership
+            $stmt = $this->db->prepare("
+            SELECT p.*, ct.name as crop_name, ct.category
+            FROM plantings p
+            JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            WHERE p.planting_id = :planting_id 
+            AND p.farmer_id = :farmer_id
+            AND p.status IN ('planted', 'growing')
+        ");
+            $stmt->execute([
+                'planting_id' => $input['planting_id'],
+                'farmer_id' => $farmer['farmer_id']
+            ]);
+
+            $planting = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$planting) {
+                throw new Exception("Invalid planting or unauthorized access");
+            }
+
             // Record harvest
-            $stmt = $this->db->prepare("INSERT INTO harvests (
-            planting_id, harvest_date, quantity, unit,
-            quality_grade, storage_location
-        ) VALUES (
-            :planting_id, :harvest_date, :quantity, :unit,
-            :quality_grade, :storage_location
-        )");
+            $stmt = $this->db->prepare("
+            INSERT INTO harvests (
+                planting_id, 
+                harvest_date, 
+                quantity, 
+                unit,
+                quality_grade, 
+                storage_location
+            ) VALUES (
+                :planting_id, 
+                :harvest_date, 
+                :quantity, 
+                :unit,
+                :quality_grade, 
+                :storage_location
+            )
+        ");
 
             $stmt->execute([
                 'planting_id' => $input['planting_id'],
@@ -846,47 +969,100 @@ class FarmerController extends BaseController
             $harvestId = $this->db->lastInsertId();
 
             // Update planting status
-            $stmt = $this->db->prepare("UPDATE plantings SET status = 'harvested' WHERE planting_id = :planting_id");
-            $stmt->execute(['planting_id' => $input['planting_id']]);
+            $stmt = $this->db->prepare("
+            UPDATE plantings 
+            SET 
+                status = 'harvested',
+                actual_harvest_date = :harvest_date
+            WHERE planting_id = :planting_id 
+            AND farmer_id = :farmer_id
+        ");
 
+            $stmt->execute([
+                'harvest_date' => $input['harvest_date'],
+                'planting_id' => $input['planting_id'],
+                'farmer_id' => $farmer['farmer_id']
+            ]);
+
+            $productId = null;
             // Create product if requested
             if (!empty($input['create_product'])) {
                 $stmt = $this->db->prepare("
                 INSERT INTO products (
-                    farmer_id, harvest_id, name, category, price_per_unit,
-                    unit_type, stock_quantity, status
-                )
-                SELECT 
-                    p.farmer_id,
+                    farmer_id,
+                    harvest_id,
+                    name,
+                    category,
+                    description,
+                    price_per_unit,
+                    unit_type,
+                    stock_quantity,
+                    status
+                ) VALUES (
+                    :farmer_id,
                     :harvest_id,
-                    ct.name,
-                    ct.category,
+                    :name,
+                    :category,
+                    :description,
                     :price_per_unit,
-                    h.unit,
-                    h.quantity,
+                    :unit_type,
+                    :stock_quantity,
                     'available'
-                FROM plantings p
-                JOIN crop_types ct ON p.crop_type_id = ct.crop_id
-                JOIN harvests h ON h.planting_id = p.planting_id
-                WHERE p.planting_id = :planting_id
+                )
             ");
 
                 $stmt->execute([
+                    'farmer_id' => $farmer['farmer_id'],
                     'harvest_id' => $harvestId,
+                    'name' => $planting['crop_name'],
+                    'category' => $planting['category'],
+                    'description' => "Fresh harvest from " . $farmer['farm_name'],
                     'price_per_unit' => $input['price_per_unit'],
-                    'planting_id' => $input['planting_id']
+                    'unit_type' => $input['unit'],
+                    'stock_quantity' => $input['quantity']
                 ]);
+
+                $productId = $this->db->lastInsertId();
+
+                // Handle product images if any were uploaded
+                if (!empty($_FILES['product_images']) && !empty($_FILES['product_images']['tmp_name'][0])) {
+                    $this->logger->info("Processing product images", [
+                        'product_id' => $productId,
+                        'files' => $_FILES['product_images']
+                    ]);
+
+                    $imageResult = $this->handleProductImages($productId, $_FILES);
+                    if (!$imageResult['success']) {
+                        throw new Exception("Failed to process product images: " . $imageResult['message']);
+                    }
+                }
             }
 
             $this->db->commit();
-            $this->setFlashMessage('Harvest recorded successfully' .
-                ($input['create_product'] ? ' and product created' : ''), 'success');
+
+            // Build success message
+            $successMessage = 'Harvest recorded successfully';
+            if ($productId) {
+                $successMessage .= ' and product listing created';
+            }
+
+            $this->setFlashMessage($successMessage, 'success');
             $this->redirect('/farmer/manage-crops');
         } catch (Exception $e) {
             $this->db->rollBack();
-            $this->logger->error("Error recording harvest: " . $e->getMessage());
-            $this->setFlashMessage('Failed to record harvest', 'error');
-            $this->redirectWithInput('/farmer/record-harvest?planting_id=' . $_POST['planting_id'], $_POST);
+
+            $this->logger->error("Error recording harvest", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'post_data' => $_POST,
+                'files' => $_FILES
+            ]);
+
+            $this->setFlashMessage('Failed to record harvest: ' . $e->getMessage(), 'error');
+            $this->redirectWithInput(
+                '/farmer/record-harvest?planting_id=' . $_POST['planting_id'],
+                $_POST
+            );
         }
     }
 }
