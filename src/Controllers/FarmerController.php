@@ -452,14 +452,73 @@ class FarmerController extends BaseController
     public function manageCrops(): void
     {
         try {
-            $farmerId = $_SESSION['user_id'];
-            $farmerProfile = $this->farmerModel->getFarmerProfile($farmerId);
+            // Get the current user's farmer_id
+            $stmt = $this->db->prepare("
+            SELECT fp.farmer_id, fp.farm_name, fp.farm_type
+            FROM farmer_profiles fp
+            WHERE fp.user_id = :user_id
+        ");
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+            $farmerProfile = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Get all crop types for the dropdown
+            if (!$farmerProfile) {
+                throw new Exception("Farmer profile not found");
+            }
+
+            // Get crop types for the dropdown
             $cropTypes = $this->getAllCropTypes();
 
-            // Get current plantings
-            $plantings = $this->plantingModel->getCurrentPlantings($farmerId);
+            // Get current plantings with detailed information
+            $plantingsQuery = "
+            SELECT p.*, 
+                   ct.name as crop_name,
+                   ct.category,
+                   DATEDIFF(p.expected_harvest_date, CURRENT_DATE) as days_until_harvest,
+                   CASE 
+                       WHEN p.status = 'growing' THEN 
+                           ROUND((DATEDIFF(CURRENT_DATE, p.planting_date) * 100.0) / 
+                                NULLIF(DATEDIFF(p.expected_harvest_date, p.planting_date), 0), 1)
+                       ELSE NULL 
+                   END as growth_percentage
+            FROM plantings p
+            JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            WHERE p.farmer_id = :farmer_id
+            ORDER BY 
+                CASE p.status
+                    WHEN 'growing' THEN 1
+                    WHEN 'planted' THEN 2
+                    WHEN 'planned' THEN 3
+                    ELSE 4
+                END,
+                p.expected_harvest_date ASC";
+
+            $stmt = $this->db->prepare($plantingsQuery);
+            $stmt->execute(['farmer_id' => $farmerProfile['farmer_id']]);
+            $plantings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Log the results for debugging
+            $this->logger->info("Retrieved plantings for farmer", [
+                'farmer_id' => $farmerProfile['farmer_id'],
+                'planting_count' => count($plantings),
+                'user_id' => $_SESSION['user_id']
+            ]);
+
+            // Add readable status labels and format dates
+            foreach ($plantings as &$planting) {
+                $planting['status_label'] = ucfirst($planting['status']);
+                $planting['planting_date'] = date('Y-m-d', strtotime($planting['planting_date']));
+                $planting['expected_harvest_date'] = date('Y-m-d', strtotime($planting['expected_harvest_date']));
+
+                // Add CSS classes for status badges
+                $planting['status_class'] = match ($planting['status']) {
+                    'growing' => 'success',
+                    'planted' => 'primary',
+                    'planned' => 'info',
+                    'harvested' => 'secondary',
+                    'failed' => 'danger',
+                    default => 'secondary'
+                };
+            }
 
             $this->render('farmer/manage-crops', [
                 'cropTypes' => $cropTypes,
@@ -468,8 +527,11 @@ class FarmerController extends BaseController
                 'currentPage' => 'manage-crops'
             ], 'Manage Crops', 'farmer/layouts/farmer');
         } catch (Exception $e) {
-            $this->logger->error("Error loading crop management: " . $e->getMessage());
-            $this->setFlashMessage('Error loading crops', 'error');
+            $this->logger->error("Error loading crop management: " . $e->getMessage(), [
+                'user_id' => $_SESSION['user_id'],
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('Error loading crops: ' . $e->getMessage(), 'error');
             $this->redirect('/farmer/dashboard');
         }
     }
@@ -530,7 +592,11 @@ class FarmerController extends BaseController
     private function getAllCropTypes(): array
     {
         try {
-            $sql = "SELECT crop_id, name, category FROM crop_types";
+            $sql = "SELECT crop_id, name, category, 
+                       typical_growth_duration,
+                       growing_season
+                FROM crop_types
+                ORDER BY category, name";
             $stmt = $this->db->prepare($sql);
             $stmt->execute();
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -641,74 +707,102 @@ class FarmerController extends BaseController
                 throw new Exception("Invalid planting ID");
             }
 
-            // Get user's farmer_id
-            $stmt = $this->db->prepare("SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id");
+            // Get farmer profile with detailed logging
+            $stmt = $this->db->prepare("
+            SELECT fp.farmer_id, fp.farm_name 
+            FROM farmer_profiles fp
+            WHERE fp.user_id = :user_id
+        ");
             $stmt->execute(['user_id' => $_SESSION['user_id']]);
             $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Log farmer details
-            $this->logger->info("Farmer details", [
+            $this->logger->info("Farmer profile lookup result", [
                 'user_id' => $_SESSION['user_id'],
-                'farmer' => $farmer
+                'farmer_data' => $farmer
             ]);
 
             if (!$farmer) {
+                $this->logger->error("Farmer profile not found", [
+                    'user_id' => $_SESSION['user_id']
+                ]);
                 throw new Exception("Farmer profile not found");
             }
 
-            // Get planting details with crop name
+            // Query planting with detailed logging
             $query = "
-            SELECT p.*, ct.name as crop_name, ct.category
+            SELECT p.*, 
+                   ct.name as crop_name, 
+                   ct.category,
+                   fp.farm_name
             FROM plantings p
             JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            JOIN farmer_profiles fp ON p.farmer_id = fp.farmer_id
             WHERE p.planting_id = :planting_id
             AND p.farmer_id = :farmer_id
+            AND p.status IN ('planted', 'growing')
         ";
 
-            $stmt = $this->db->prepare($query);
             $params = [
                 'planting_id' => $plantingId,
                 'farmer_id' => $farmer['farmer_id']
             ];
 
-            // Log query details
+            // Log the query and parameters
             $this->logger->info("Executing planting query", [
                 'query' => $query,
                 'params' => $params
             ]);
 
+            $stmt = $this->db->prepare($query);
             $stmt->execute($params);
             $planting = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Log planting result
+            // Log the query result
             $this->logger->info("Planting query result", [
-                'planting' => $planting
+                'planting' => $planting,
+                'has_result' => !empty($planting)
             ]);
 
             if (!$planting) {
                 // Check if planting exists at all
-                $stmt = $this->db->prepare("SELECT * FROM plantings WHERE planting_id = :planting_id");
-                $stmt->execute(['planting_id' => $plantingId]);
-                $anyPlanting = $stmt->fetch(PDO::FETCH_ASSOC);
+                $checkStmt = $this->db->prepare("
+                SELECT p.*, fp.farmer_id as owner_id, u.name as owner_name
+                FROM plantings p
+                JOIN farmer_profiles fp ON p.farmer_id = fp.farmer_id
+                JOIN users u ON fp.user_id = u.id
+                WHERE p.planting_id = :planting_id
+            ");
+                $checkStmt->execute(['planting_id' => $plantingId]);
+                $existingPlanting = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-                $this->logger->error("Planting not found", [
+                $this->logger->error("Unauthorized access or invalid planting", [
                     'planting_id' => $plantingId,
                     'farmer_id' => $farmer['farmer_id'],
-                    'exists_for_other_farmer' => !empty($anyPlanting)
+                    'exists_for_other_farmer' => !empty($existingPlanting),
+                    'planting_details' => $existingPlanting ? [
+                        'owner_id' => $existingPlanting['owner_id'],
+                        'owner_name' => $existingPlanting['owner_name'],
+                        'status' => $existingPlanting['status']
+                    ] : null
                 ]);
 
-                throw new Exception("Planting not found");
+                throw new Exception(
+                    !empty($existingPlanting) ?
+                        "Unauthorized access: This planting belongs to another farmer" :
+                        "Planting not found"
+                );
             }
 
             $data = [
                 'planting' => $planting,
+                'farmer' => $farmer,
                 'currentPage' => 'manage-crops'
             ];
 
             $this->render('farmer/record-harvest', $data, 'Record Harvest', 'farmer/layouts/farmer');
         } catch (Exception $e) {
             $this->logger->error("Error loading harvest form: " . $e->getMessage());
-            $this->setFlashMessage('Error loading harvest form: ' . $e->getMessage(), 'error');
+            $this->setFlashMessage('Error: ' . $e->getMessage(), 'error');
             $this->redirect('/farmer/manage-crops');
         }
     }
