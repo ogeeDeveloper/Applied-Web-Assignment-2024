@@ -3,12 +3,13 @@
 return [
     'public' => [
         'GET /' => ['HomeController', 'index'],
-    
+
         'GET /products' => ['ProductController', 'listProducts'],
         'GET /product_details' => ['ProductController', 'productdetail'],
         'GET /about' => ['HomeController', 'about'],
         'GET /contact' => ['HomeController', 'contact'],
-        'GET /product-details/{id}' => ['ProductController', 'productdetail']
+        'GET /product-details/{id}' => ['ProductController', 'productdetail'],
+        'GET /shop' => ['ProductController', 'renderShopPage'],
     ],
     'auth' => [
         // Customer auth routes

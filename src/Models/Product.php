@@ -778,14 +778,14 @@ class Product
         }
     }
 
-    public function getPopularProducts(int $limit = 10, ?string $category = null): array
+    public function getFilteredProducts(array $filters): array
     {
         try {
-            $this->logger->info("Fetching popular products", [
-                'limit' => $limit,
-                'category' => $category
-            ]);
+            $this->logger->info("Fetching filtered products", $filters);
 
+            $params = [];
+
+            // Base SQL query
             $sql = "
             SELECT 
                 p.*,
@@ -793,11 +793,20 @@ class Product
                 fp.location as farm_location,
                 COALESCE(order_stats.total_orders, 0) as order_count,
                 COALESCE(order_stats.total_quantity, 0) as total_quantity_sold,
-                COALESCE(order_stats.total_revenue, 0) as total_revenue
+                COALESCE(order_stats.total_revenue, 0) as total_revenue,
+                (
+                    SELECT mf.file_path 
+                    FROM media_files mf 
+                    WHERE mf.entity_type = 'product' 
+                    AND mf.entity_id = p.product_id 
+                    AND mf.is_primary = 1 
+                    AND mf.status = 'active'
+                    LIMIT 1
+                ) as primary_image_path
             FROM products p
             JOIN farmer_profiles fp ON p.farmer_id = fp.farmer_id
             LEFT JOIN (
-                -- Get order statistics for the last 30 days
+                -- Order statistics subquery
                 SELECT 
                     oi.product_id,
                     COUNT(DISTINCT o.order_id) as total_orders,
@@ -811,79 +820,115 @@ class Product
             ) order_stats ON p.product_id = order_stats.product_id
             WHERE p.status = 'available'
             AND p.stock_quantity > 0
-            " . ($category ? "AND p.category = :category" : "") . "
-            ORDER BY 
-                -- Order by sales metrics
-                total_orders DESC,
-                total_revenue DESC,
-                -- Then by stock status (prioritize well-stocked items)
-                CASE 
-                    WHEN p.stock_quantity > p.low_stock_alert_threshold THEN 1
-                    ELSE 2
-                END,
-                -- Finally by creation date
-                p.created_at DESC
-            LIMIT :limit";
+        ";
+
+            // Add category filter
+            if (!empty($filters['category'])) {
+                $sql .= " AND p.category = :category";
+                $params[':category'] = $filters['category'];
+            }
+
+            // Add price range filters
+            if (isset($filters['min_price']) && $filters['min_price'] !== null) {
+                $sql .= " AND p.price_per_unit >= :min_price";
+                $params[':min_price'] = $filters['min_price'];
+            }
+            if (isset($filters['max_price']) && $filters['max_price'] !== null) {
+                $sql .= " AND p.price_per_unit <= :max_price";
+                $params[':max_price'] = $filters['max_price'];
+            }
+
+            // Add sorting
+            $sql .= match ($filters['sort_by'] ?? 'latest') {
+                'low_high' => " ORDER BY p.price_per_unit ASC",
+                'high_low' => " ORDER BY p.price_per_unit DESC",
+                'popular' => " ORDER BY order_stats.total_orders DESC, order_stats.total_revenue DESC",
+                'oldest' => " ORDER BY p.created_at ASC",
+                default => " ORDER BY p.created_at DESC" // 'latest'
+            };
+
+            // Add limit
+            if (isset($filters['limit'])) {
+                $sql .= " LIMIT :limit";
+                $params[':limit'] = (int)$filters['limit'];
+            }
 
             $stmt = $this->db->prepare($sql);
-
-            if ($category) {
-                $stmt->bindValue(':category', $category, PDO::PARAM_STR);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue(
+                    $key,
+                    $value,
+                    is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR
+                );
             }
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 
             $stmt->execute();
             $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Get media files for each product
+            // Enhance products with additional data
             foreach ($products as &$product) {
-                // Get product images
-                $product['media'] = $this->mediaManager->getEntityFiles('product', $product['product_id']);
-
-                // Get primary image
-                $product['primary_image'] = array_filter(
-                    $product['media'],
-                    fn($img) => $img['is_primary']
-                )[0] ?? ($product['media'][0] ?? null);
-
-                // Format numerical values
+                // Format numbers
                 $product['price_per_unit'] = floatval($product['price_per_unit']);
+                $product['formatted_price'] = number_format($product['price_per_unit'], 2);
                 $product['stock_quantity'] = intval($product['stock_quantity']);
-                $product['total_orders'] = intval($product['order_count']);
-                $product['total_quantity_sold'] = intval($product['total_quantity_sold']);
-                $product['total_revenue'] = floatval($product['total_revenue']);
 
-                // Add computed fields
+                // Get stock status
                 $product['stock_status'] = $this->getStockStatus(
                     $product['stock_quantity'],
                     $product['low_stock_alert_threshold']
                 );
-                $product['is_organic'] = (bool)$product['organic_certified'];
+
+                // Get product images
+                $product['media'] = $this->mediaManager->getEntityFiles('product', $product['product_id']);
+
+                // Set primary image
+                if (!$product['primary_image_path'] && !empty($product['media'])) {
+                    $primary = array_filter($product['media'], fn($img) => $img['is_primary']);
+                    $product['primary_image_path'] = !empty($primary) ?
+                        reset($primary)['file_path'] :
+                        $product['media'][0]['file_path'];
+                }
+
+                // Ensure there's always an image path
+                if (empty($product['primary_image_path'])) {
+                    $product['primary_image_path'] = '/images/default-product.jpg';
+                }
             }
 
-            $this->logger->info("Successfully fetched popular products", [
+            $this->logger->info("Filtered products retrieved", [
                 'count' => count($products)
             ]);
 
             return $products;
         } catch (\PDOException $e) {
-            $this->logger->error("Error fetching popular products: " . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
+            $this->logger->error("Database error in getFilteredProducts: " . $e->getMessage());
+            return [];
+        } catch (\Exception $e) {
+            $this->logger->error("Error in getFilteredProducts: " . $e->getMessage());
+            return [];
         }
     }
 
-    /**
-     * Helper method to determine stock status
-     */
-    private function getStockStatus(int $currentStock, int $threshold): string
+    private function getStockStatus(int $currentStock, int $threshold): array
     {
         if ($currentStock <= 0) {
-            return 'out_of_stock';
-        } elseif ($currentStock <= $threshold) {
-            return 'low_stock';
+            return [
+                'status' => 'out_of_stock',
+                'label' => 'Out of Stock',
+                'class' => 'badge badge-danger'
+            ];
         }
-        return 'in_stock';
+        if ($currentStock <= $threshold) {
+            return [
+                'status' => 'low_stock',
+                'label' => 'Low Stock',
+                'class' => 'badge badge-warning'
+            ];
+        }
+        return [
+            'status' => 'in_stock',
+            'label' => 'In Stock',
+            'class' => 'badge badge-success'
+        ];
     }
 }

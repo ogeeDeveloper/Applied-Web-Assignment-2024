@@ -293,4 +293,47 @@ class ProductController extends BaseController
             'class' => 'badge-success'
         ];
     }
+
+    public function renderShopPage(): void
+    {
+        try {
+            // Fetch filters from query parameters with proper defaults
+            $filters = [
+                'category' => $_GET['category'] ?? '',
+                'min_price' => !empty($_GET['min_price']) ? floatval($_GET['min_price']) : null,
+                'max_price' => !empty($_GET['max_price']) ? floatval($_GET['max_price']) : null,
+                'sort_by' => $_GET['sort_by'] ?? 'latest',
+                'limit' => 12 // Number of products per page
+            ];
+
+            // Log the incoming request
+            $this->logger->info("Shop page request", [
+                'filters' => $filters,
+                'request' => $_GET
+            ]);
+
+            // Fetch filtered products
+            $products = $this->productModel->getFilteredProducts($filters);
+
+            // Prepare data for view
+            $data = [
+                'products' => $products,
+                'filters' => $filters,
+                'pageTitle' => 'Shop - AgriKonnect',
+                'categories' => [
+                    'vegetables' => 'Vegetables',
+                    'fruits' => 'Fruits',
+                    'grains' => 'Grains',
+                    'dairy' => 'Dairy Products'
+                ]
+            ];
+
+            // Render the view
+            $this->render('shop.view', $data, 'Shop - AgriKonnect', 'layouts/main');
+        } catch (Exception $e) {
+            $this->logger->error("Error rendering shop page: " . $e->getMessage());
+            $this->setFlashMessage('Error loading products. Please try again.', 'error');
+            $this->redirect('/');
+        }
+    }
 }

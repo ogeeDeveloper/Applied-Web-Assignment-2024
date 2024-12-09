@@ -32,13 +32,13 @@ try {
     $dotenv->load();
 
     // Error handling based on environment
-    if ($_ENV['APP_ENV'] === 'development') {
-        ini_set('display_errors', 1);
-        ini_set('display_startup_errors', 1);
-        error_reporting(E_ALL);
-    } else {
-        error_reporting(0);
-    }
+    // if ($_ENV['APP_ENV'] === 'development') {
+    //     ini_set('display_errors', 1);
+    //     ini_set('display_startup_errors', 1);
+    //     error_reporting(E_ALL);
+    // } else {
+    //     error_reporting(0);
+    // }
 
     // Initialize logger
     $logger = new AppLogger('app');
@@ -249,4 +249,3 @@ try {
 if (isset($_SESSION['flash_messages'])) {
     unset($_SESSION['flash_messages']);
 }
-
