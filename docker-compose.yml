@@ -13,19 +13,6 @@ services:
       - ./.env:/var/www/.env
       - ./storage/logs:/var/www/storage/logs
     environment:
-<<<<<<< HEAD
-      MYSQL_HOST: mysql 
-      MYSQL_DATABASE: ${DB_DATABASE} 
-      MYSQL_USER: ${DB_USERNAME}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - app-net
-    
-=======
       MYSQL_HOST: mysql
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -33,7 +20,6 @@ services:
     networks:
       - app-net
     command: bash /var/www/docker/php/docker-entrypoint.sh
->>>>>>> 4d4fb05ad719ef70d7991bbe5354b53fd4d6f483
 
   nginx:
     image: nginx:latest
@@ -53,12 +39,12 @@ services:
     container_name: crop_production_mysql
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}      
-      - MYSQL_DATABASE=${DB_DATABASE}    
-      - MYSQL_USER=${DB_USERNAME}    
-      - MYSQL_PASSWORD=${DB_PASSWORD}    
-      - MYSQL_ROOT_HOST="%" 
-      - TZ=UTC
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+      TZ: UTC
     command:
       [
         "--character-set-server=utf8mb4",
