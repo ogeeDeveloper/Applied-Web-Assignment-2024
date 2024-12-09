@@ -931,4 +931,100 @@ class Product
             'class' => 'badge badge-success'
         ];
     }
+
+    public function getPopularProducts(int $limit = 10, ?string $category = null): array
+    {
+        try {
+            $this->logger->info("Fetching popular products", [
+                'limit' => $limit,
+                'category' => $category
+            ]);
+
+            $sql = "
+            SELECT 
+                p.*,
+                fp.farm_name,
+                fp.location as farm_location,
+                COALESCE(order_stats.total_orders, 0) as order_count,
+                COALESCE(order_stats.total_quantity, 0) as total_quantity_sold,
+                COALESCE(order_stats.total_revenue, 0) as total_revenue
+            FROM products p
+            JOIN farmer_profiles fp ON p.farmer_id = fp.farmer_id
+            LEFT JOIN (
+                -- Get order statistics for the last 30 days
+                SELECT 
+                    oi.product_id,
+                    COUNT(DISTINCT o.order_id) as total_orders,
+                    SUM(oi.quantity) as total_quantity,
+                    SUM(oi.total_price) as total_revenue
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE o.ordered_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+                AND o.order_status != 'cancelled'
+                GROUP BY oi.product_id
+            ) order_stats ON p.product_id = order_stats.product_id
+            WHERE p.status = 'available'
+            AND p.stock_quantity > 0
+            " . ($category ? "AND p.category = :category" : "") . "
+            ORDER BY 
+                -- Order by sales metrics
+                total_orders DESC,
+                total_revenue DESC,
+                -- Then by stock status (prioritize well-stocked items)
+                CASE 
+                    WHEN p.stock_quantity > p.low_stock_alert_threshold THEN 1
+                    ELSE 2
+                END,
+                -- Finally by creation date
+                p.created_at DESC
+            LIMIT :limit";
+
+            $stmt = $this->db->prepare($sql);
+
+            if ($category) {
+                $stmt->bindValue(':category', $category, PDO::PARAM_STR);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+
+            $stmt->execute();
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Get media files for each product
+            foreach ($products as &$product) {
+                // Get product images
+                $product['media'] = $this->mediaManager->getEntityFiles('product', $product['product_id']);
+
+                // Get primary image
+                $product['primary_image'] = array_filter(
+                    $product['media'],
+                    fn($img) => $img['is_primary']
+                )[0] ?? ($product['media'][0] ?? null);
+
+                // Format numerical values
+                $product['price_per_unit'] = floatval($product['price_per_unit']);
+                $product['stock_quantity'] = intval($product['stock_quantity']);
+                $product['total_orders'] = intval($product['order_count']);
+                $product['total_quantity_sold'] = intval($product['total_quantity_sold']);
+                $product['total_revenue'] = floatval($product['total_revenue']);
+
+                // Add computed fields
+                $product['stock_status'] = $this->getStockStatus(
+                    $product['stock_quantity'],
+                    $product['low_stock_alert_threshold']
+                );
+                $product['is_organic'] = (bool)$product['organic_certified'];
+            }
+
+            $this->logger->info("Successfully fetched popular products", [
+                'count' => count($products)
+            ]);
+
+            return $products;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error fetching popular products: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
 }
