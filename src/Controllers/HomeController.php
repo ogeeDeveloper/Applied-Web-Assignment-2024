@@ -34,4 +34,11 @@ class HomeController extends BaseController {
                 ]);
             }
     }
+
+    public function about() {
+        // $result = $this->productModel->getProductDetails($id);
+
+        $this->render('about.view');
+    }
+
 }

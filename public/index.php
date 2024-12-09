@@ -145,6 +145,9 @@ try {
             try {
                 [$controllerName, $methodName] = $groupRoutes[$route];
                 $controllerClass = "App\\Controllers\\$controllerName";
+                if (isset($matches[1])) {
+                    $params['id'] = $matches[1]; // Product ID from the URL
+                }
 
                 // Skip middleware for public and auth routes
                 if (
@@ -157,6 +160,7 @@ try {
                     ]))
                 ) {
                     $controller = new $controllerClass($db, $logger);
+                    // $controller->$methodName($params['id'])
                     $controller->$methodName();
                     $routeHandled = true;
                     break;
@@ -245,3 +249,4 @@ try {
 if (isset($_SESSION['flash_messages'])) {
     unset($_SESSION['flash_messages']);
 }
+

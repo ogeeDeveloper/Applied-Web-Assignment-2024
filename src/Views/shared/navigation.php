@@ -12,10 +12,10 @@ $mainNav = [
     'Shop' => [
         'url' => '/shop',
         'submenu' => [
-            'Vegetables' => '/shop/vegetables',
-            'Fruits' => '/shop/fruits',
-            'Rice & Grains' => '/shop/rice-grains',
-            'Fresh Products' => '/shop/fresh-products'
+            'Vegetables' => '/product-details/1',
+            'Fruits' => '/shop/fruits?id=2',
+            'Rice & Grains' => '/shop/rice-grains?id=3',
+            'Fresh Products' => '/shop/fresh-products?id=4'
         ]
     ],
     'Farmers' => [
@@ -33,7 +33,13 @@ $mainNav = [
     'Contact' => [
         'url' => '/contact',
         'submenu' => null
+    ],
+'Products' => [
+        'url' => '/product_details',
+        'submenu' => null
     ]
+
+
 ];
 ?>
 
@@ -77,7 +83,7 @@ $mainNav = [
                     <path d="M7.115 11.6517C8.02238 13.5074 9.5263 15.0049 11.3859 15.9042C11.522 15.9688 11.6727 15.9966 11.8229 15.9851C11.9731 15.9736 12.1178 15.9231 12.2425 15.8386L14.9812 14.0134C15.1022 13.9326 15.2414 13.8833 15.3862 13.8698C15.5311 13.8564 15.677 13.8793 15.8107 13.9364L20.9339 16.1326C21.1079 16.2065 21.2532 16.335 21.3479 16.4987C21.4426 16.6623 21.4815 16.8523 21.4589 17.04C21.2967 18.307 20.6784 19.4714 19.7196 20.3154C18.7608 21.1593 17.5273 21.6249 16.25 21.625C12.3049 21.625 8.52139 20.0578 5.73179 17.2682C2.94218 14.4786 1.375 10.6951 1.375 6.75C1.37512 5.47279 1.84074 4.23941 2.68471 3.28077C3.52867 2.32213 4.6931 1.70396 5.96 1.542" 
                           stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                +63 912 345 6789
+                +876 123-4567
             </a>
         </nav>
     </div>

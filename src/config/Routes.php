@@ -3,9 +3,12 @@
 return [
     'public' => [
         'GET /' => ['HomeController', 'index'],
+    
         'GET /products' => ['ProductController', 'listProducts'],
+        'GET /product_details' => ['ProductController', 'productdetail'],
         'GET /about' => ['HomeController', 'about'],
         'GET /contact' => ['HomeController', 'contact'],
+        'GET /product-details/{id}' => ['ProductController', 'productdetail']
     ],
     'auth' => [
         // Customer auth routes
@@ -81,6 +84,6 @@ return [
     ],
     'protected' => [
         'GET /customer/dashboard' => ['CustomerController', 'dashboard'],
-
+        'GET /farmer/dashboard' => ['FarmerController', 'dashboard'],
     ]
 ];

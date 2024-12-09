@@ -560,442 +560,151 @@
                                     </a>
                                 </div>
                             </div>
-                        </div>
-                        <div class="swiper-slide swiper-slide-active" role="group" aria-label="4 / 9" data-swiper-slide-index="0" style="width: 456px; margin-right: 24px;">
-                            <div class="cards-blog">
-                                <div class="cards-blog__img-wrapper">
-                                    <img src="/images/blogs/blog-01.png" alt="img-01">
-                                    <div class="date">
-                                        <h3 class="font-body--xxl-500">18</h3>
-                                        <span class="font-body--sm-500">Nov</span>
-                                    </div>
-                                </div>
-                                <div class="cards-blog__info">
-                                    <div class="cards-blog__info-tags d-flex">
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M17.1583 11.6748L11.1833 17.6498C11.0285 17.8048 10.8447 17.9277 10.6424 18.0116C10.4401 18.0955 10.2232 18.1386 10.0042 18.1386C9.78513 18.1386 9.56825 18.0955 9.36592 18.0116C9.16359 17.9277 8.97978 17.8048 8.82499 17.6498L1.66666 10.4998V2.1665H9.99999L17.1583 9.32484C17.4687 9.63711 17.643 10.0595 17.643 10.4998C17.643 10.9401 17.4687 11.3626 17.1583 11.6748V11.6748Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    <path d="M5.83331 6.33301H5.84165" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            Food
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="14" height="17" viewBox="0 0 14 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M6.99993 7.66667C8.84088 7.66667 10.3333 6.17428 10.3333 4.33333C10.3333 2.49238 8.84088 1 6.99993 1C5.15898 1 3.6666 2.49238 3.6666 4.33333C3.6666 6.17428 5.15898 7.66667 6.99993 7.66667Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                    <path d="M9.49995 10.1665H4.49995C2.19828 10.1665 0.137447 12.2915 1.65161 14.024C2.68161 15.2023 4.38495 15.9998 6.99995 15.9998C9.61495 15.9998 11.3174 15.2023 12.3474 14.024C13.8624 12.2907 11.8008 10.1665 9.49995 10.1665Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                </svg>
-                                            </span>
-                                            By Admin
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="16" height="14" viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M9.52381 11.2728L8.48206 13.0087C8.43209 13.092 8.36139 13.1609 8.27687 13.2088C8.19234 13.2566 8.09686 13.2818 7.99972 13.2818C7.90258 13.2818 7.8071 13.2566 7.72257 13.2088C7.63804 13.1609 7.56735 13.092 7.51738 13.0087L6.47675 11.2728C6.42671 11.1895 6.35596 11.1206 6.27138 11.0728C6.1868 11.025 6.09128 10.9999 5.99413 11H1.8125C1.66332 11 1.52024 10.9407 1.41475 10.8352C1.30926 10.7298 1.25 10.5867 1.25 10.4375V1.4375C1.25 1.28832 1.30926 1.14524 1.41475 1.03975C1.52024 0.934263 1.66332 0.875 1.8125 0.875H14.1875C14.3367 0.875 14.4798 0.934263 14.5852 1.03975C14.6907 1.14524 14.75 1.28832 14.75 1.4375V10.4375C14.75 10.5867 14.6907 10.7298 14.5852 10.8352C14.4798 10.9407 14.3367 11 14.1875 11H10.0059C9.90881 11 9.81341 11.0252 9.72894 11.073C9.64446 11.1208 9.5738 11.1896 9.52381 11.2728V11.2728Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            65 Comments
-                                        </div>
-                                    </div>
-                                    <a href="single-blog.html" class="blog-title font-body--xl-500">Curabitur porttitor orci eget neque accumsan venenatis. Nunc fermentum.</a>
-                                    <a href="single-blog.html">
-                                        Read More
-                                        <span>
-                                            <svg width="17" height="15" viewBox="0 0 17 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M16 7.50049H1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                <path d="M9.95001 1.47559L16 7.49959L9.95001 13.5246" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                            </svg>
-                                        </span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="swiper-slide swiper-slide-next" role="group" aria-label="5 / 9" data-swiper-slide-index="1" style="width: 456px; margin-right: 24px;">
-                            <div class="cards-blog">
-                                <div class="cards-blog__img-wrapper">
-                                    <img src="/images/blogs/blog-02.png" alt="img-01">
-                                    <div class="date">
-                                        <h3 class="font-body--xxl-500">18</h3>
-                                        <span class="font-body--sm-500">Nov</span>
-                                    </div>
-                                </div>
-                                <div class="cards-blog__info">
-                                    <div class="cards-blog__info-tags d-flex">
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M17.1583 11.6748L11.1833 17.6498C11.0285 17.8048 10.8447 17.9277 10.6424 18.0116C10.4401 18.0955 10.2232 18.1386 10.0042 18.1386C9.78513 18.1386 9.56825 18.0955 9.36592 18.0116C9.16359 17.9277 8.97978 17.8048 8.82499 17.6498L1.66666 10.4998V2.1665H9.99999L17.1583 9.32484C17.4687 9.63711 17.643 10.0595 17.643 10.4998C17.643 10.9401 17.4687 11.3626 17.1583 11.6748V11.6748Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    <path d="M5.83331 6.33301H5.84165" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            Food
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="14" height="17" viewBox="0 0 14 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M6.99993 7.66667C8.84088 7.66667 10.3333 6.17428 10.3333 4.33333C10.3333 2.49238 8.84088 1 6.99993 1C5.15898 1 3.6666 2.49238 3.6666 4.33333C3.6666 6.17428 5.15898 7.66667 6.99993 7.66667Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                    <path d="M9.49995 10.1665H4.49995C2.19828 10.1665 0.137447 12.2915 1.65161 14.024C2.68161 15.2023 4.38495 15.9998 6.99995 15.9998C9.61495 15.9998 11.3174 15.2023 12.3474 14.024C13.8624 12.2907 11.8008 10.1665 9.49995 10.1665Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                </svg>
-                                            </span>
-                                            By Admin
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="16" height="14" viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M9.52381 11.2728L8.48206 13.0087C8.43209 13.092 8.36139 13.1609 8.27687 13.2088C8.19234 13.2566 8.09686 13.2818 7.99972 13.2818C7.90258 13.2818 7.8071 13.2566 7.72257 13.2088C7.63804 13.1609 7.56735 13.092 7.51738 13.0087L6.47675 11.2728C6.42671 11.1895 6.35596 11.1206 6.27138 11.0728C6.1868 11.025 6.09128 10.9999 5.99413 11H1.8125C1.66332 11 1.52024 10.9407 1.41475 10.8352C1.30926 10.7298 1.25 10.5867 1.25 10.4375V1.4375C1.25 1.28832 1.30926 1.14524 1.41475 1.03975C1.52024 0.934263 1.66332 0.875 1.8125 0.875H14.1875C14.3367 0.875 14.4798 0.934263 14.5852 1.03975C14.6907 1.14524 14.75 1.28832 14.75 1.4375V10.4375C14.75 10.5867 14.6907 10.7298 14.5852 10.8352C14.4798 10.9407 14.3367 11 14.1875 11H10.0059C9.90881 11 9.81341 11.0252 9.72894 11.073C9.64446 11.1208 9.5738 11.1896 9.52381 11.2728V11.2728Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            65 Comments
-                                        </div>
-                                    </div>
-                                    <a href="single-blog.html" class="blog-title font-body--xl-500">Curabitur porttitor orci eget neque accumsan venenatis. Nunc fermentum.</a>
-                                    <a href="single-blog.html">
-                                        Read More
-                                        <span>
-                                            <svg width="17" height="15" viewBox="0 0 17 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M16 7.50049H1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                <path d="M9.95001 1.47559L16 7.49959L9.95001 13.5246" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                            </svg>
-                                        </span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="swiper-slide swiper-slide-duplicate-prev" role="group" aria-label="6 / 9" data-swiper-slide-index="2" style="width: 456px; margin-right: 24px;">
-                            <div class="cards-blog">
-                                <div class="cards-blog__img-wrapper">
-                                    <img src="/images/blogs/blog-03.png" alt="img-01">
-                                    <div class="date">
-                                        <h3 class="font-body--xxl-500">18</h3>
-                                        <span class="font-body--sm-500">Nov</span>
-                                    </div>
-                                </div>
-                                <div class="cards-blog__info">
-                                    <div class="cards-blog__info-tags d-flex">
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M17.1583 11.6748L11.1833 17.6498C11.0285 17.8048 10.8447 17.9277 10.6424 18.0116C10.4401 18.0955 10.2232 18.1386 10.0042 18.1386C9.78513 18.1386 9.56825 18.0955 9.36592 18.0116C9.16359 17.9277 8.97978 17.8048 8.82499 17.6498L1.66666 10.4998V2.1665H9.99999L17.1583 9.32484C17.4687 9.63711 17.643 10.0595 17.643 10.4998C17.643 10.9401 17.4687 11.3626 17.1583 11.6748V11.6748Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    <path d="M5.83331 6.33301H5.84165" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            Food
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="14" height="17" viewBox="0 0 14 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M6.99993 7.66667C8.84088 7.66667 10.3333 6.17428 10.3333 4.33333C10.3333 2.49238 8.84088 1 6.99993 1C5.15898 1 3.6666 2.49238 3.6666 4.33333C3.6666 6.17428 5.15898 7.66667 6.99993 7.66667Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                    <path d="M9.49995 10.1665H4.49995C2.19828 10.1665 0.137447 12.2915 1.65161 14.024C2.68161 15.2023 4.38495 15.9998 6.99995 15.9998C9.61495 15.9998 11.3174 15.2023 12.3474 14.024C13.8624 12.2907 11.8008 10.1665 9.49995 10.1665Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                </svg>
-                                            </span>
-                                            By Admin
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="16" height="14" viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M9.52381 11.2728L8.48206 13.0087C8.43209 13.092 8.36139 13.1609 8.27687 13.2088C8.19234 13.2566 8.09686 13.2818 7.99972 13.2818C7.90258 13.2818 7.8071 13.2566 7.72257 13.2088C7.63804 13.1609 7.56735 13.092 7.51738 13.0087L6.47675 11.2728C6.42671 11.1895 6.35596 11.1206 6.27138 11.0728C6.1868 11.025 6.09128 10.9999 5.99413 11H1.8125C1.66332 11 1.52024 10.9407 1.41475 10.8352C1.30926 10.7298 1.25 10.5867 1.25 10.4375V1.4375C1.25 1.28832 1.30926 1.14524 1.41475 1.03975C1.52024 0.934263 1.66332 0.875 1.8125 0.875H14.1875C14.3367 0.875 14.4798 0.934263 14.5852 1.03975C14.6907 1.14524 14.75 1.28832 14.75 1.4375V10.4375C14.75 10.5867 14.6907 10.7298 14.5852 10.8352C14.4798 10.9407 14.3367 11 14.1875 11H10.0059C9.90881 11 9.81341 11.0252 9.72894 11.073C9.64446 11.1208 9.5738 11.1896 9.52381 11.2728V11.2728Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            65 Comments
-                                        </div>
-                                    </div>
-                                    <a href="single-blog.html" class="blog-title font-body--xl-500">Curabitur porttitor orci eget neque accumsan venenatis. Nunc fermentum.</a>
-                                    <a href="single-blog.html">
-                                        Read More
-                                        <span>
-                                            <svg width="17" height="15" viewBox="0 0 17 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M16 7.50049H1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                <path d="M9.95001 1.47559L16 7.49959L9.95001 13.5246" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                            </svg>
-                                        </span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    <div class="swiper-slide swiper-slide-duplicate swiper-slide-duplicate-active" role="group" aria-label="4 / 9" data-swiper-slide-index="0" style="width: 456px; margin-right: 24px;">
-                            <div class="cards-blog">
-                                <div class="cards-blog__img-wrapper">
-                                    <img src="/images/blogs/blog-01.png" alt="img-01">
-                                    <div class="date">
-                                        <h3 class="font-body--xxl-500">18</h3>
-                                        <span class="font-body--sm-500">Nov</span>
-                                    </div>
-                                </div>
-                                <div class="cards-blog__info">
-                                    <div class="cards-blog__info-tags d-flex">
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M17.1583 11.6748L11.1833 17.6498C11.0285 17.8048 10.8447 17.9277 10.6424 18.0116C10.4401 18.0955 10.2232 18.1386 10.0042 18.1386C9.78513 18.1386 9.56825 18.0955 9.36592 18.0116C9.16359 17.9277 8.97978 17.8048 8.82499 17.6498L1.66666 10.4998V2.1665H9.99999L17.1583 9.32484C17.4687 9.63711 17.643 10.0595 17.643 10.4998C17.643 10.9401 17.4687 11.3626 17.1583 11.6748V11.6748Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    <path d="M5.83331 6.33301H5.84165" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            Food
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="14" height="17" viewBox="0 0 14 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M6.99993 7.66667C8.84088 7.66667 10.3333 6.17428 10.3333 4.33333C10.3333 2.49238 8.84088 1 6.99993 1C5.15898 1 3.6666 2.49238 3.6666 4.33333C3.6666 6.17428 5.15898 7.66667 6.99993 7.66667Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                    <path d="M9.49995 10.1665H4.49995C2.19828 10.1665 0.137447 12.2915 1.65161 14.024C2.68161 15.2023 4.38495 15.9998 6.99995 15.9998C9.61495 15.9998 11.3174 15.2023 12.3474 14.024C13.8624 12.2907 11.8008 10.1665 9.49995 10.1665Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                </svg>
-                                            </span>
-                                            By Admin
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="16" height="14" viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M9.52381 11.2728L8.48206 13.0087C8.43209 13.092 8.36139 13.1609 8.27687 13.2088C8.19234 13.2566 8.09686 13.2818 7.99972 13.2818C7.90258 13.2818 7.8071 13.2566 7.72257 13.2088C7.63804 13.1609 7.56735 13.092 7.51738 13.0087L6.47675 11.2728C6.42671 11.1895 6.35596 11.1206 6.27138 11.0728C6.1868 11.025 6.09128 10.9999 5.99413 11H1.8125C1.66332 11 1.52024 10.9407 1.41475 10.8352C1.30926 10.7298 1.25 10.5867 1.25 10.4375V1.4375C1.25 1.28832 1.30926 1.14524 1.41475 1.03975C1.52024 0.934263 1.66332 0.875 1.8125 0.875H14.1875C14.3367 0.875 14.4798 0.934263 14.5852 1.03975C14.6907 1.14524 14.75 1.28832 14.75 1.4375V10.4375C14.75 10.5867 14.6907 10.7298 14.5852 10.8352C14.4798 10.9407 14.3367 11 14.1875 11H10.0059C9.90881 11 9.81341 11.0252 9.72894 11.073C9.64446 11.1208 9.5738 11.1896 9.52381 11.2728V11.2728Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            65 Comments
-                                        </div>
-                                    </div>
-                                    <a href="single-blog.html" class="blog-title font-body--xl-500">Curabitur porttitor orci eget neque accumsan venenatis. Nunc fermentum.</a>
-                                    <a href="single-blog.html">
-                                        Read More
-                                        <span>
-                                            <svg width="17" height="15" viewBox="0 0 17 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M16 7.50049H1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                <path d="M9.95001 1.47559L16 7.49959L9.95001 13.5246" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                            </svg>
-                                        </span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div><div class="swiper-slide swiper-slide-duplicate swiper-slide-duplicate-next" role="group" aria-label="5 / 9" data-swiper-slide-index="1" style="width: 456px; margin-right: 24px;">
-                            <div class="cards-blog">
-                                <div class="cards-blog__img-wrapper">
-                                    <img src="/images/blogs/blog-02.png" alt="img-01">
-                                    <div class="date">
-                                        <h3 class="font-body--xxl-500">18</h3>
-                                        <span class="font-body--sm-500">Nov</span>
-                                    </div>
-                                </div>
-                                <div class="cards-blog__info">
-                                    <div class="cards-blog__info-tags d-flex">
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M17.1583 11.6748L11.1833 17.6498C11.0285 17.8048 10.8447 17.9277 10.6424 18.0116C10.4401 18.0955 10.2232 18.1386 10.0042 18.1386C9.78513 18.1386 9.56825 18.0955 9.36592 18.0116C9.16359 17.9277 8.97978 17.8048 8.82499 17.6498L1.66666 10.4998V2.1665H9.99999L17.1583 9.32484C17.4687 9.63711 17.643 10.0595 17.643 10.4998C17.643 10.9401 17.4687 11.3626 17.1583 11.6748V11.6748Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    <path d="M5.83331 6.33301H5.84165" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            Food
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="14" height="17" viewBox="0 0 14 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M6.99993 7.66667C8.84088 7.66667 10.3333 6.17428 10.3333 4.33333C10.3333 2.49238 8.84088 1 6.99993 1C5.15898 1 3.6666 2.49238 3.6666 4.33333C3.6666 6.17428 5.15898 7.66667 6.99993 7.66667Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                    <path d="M9.49995 10.1665H4.49995C2.19828 10.1665 0.137447 12.2915 1.65161 14.024C2.68161 15.2023 4.38495 15.9998 6.99995 15.9998C9.61495 15.9998 11.3174 15.2023 12.3474 14.024C13.8624 12.2907 11.8008 10.1665 9.49995 10.1665Z" stroke="currentColor" stroke-width="1.2"></path>
-                                                </svg>
-                                            </span>
-                                            By Admin
-                                        </div>
-                                        <div class="cards-blog__info-tags-item">
-                                            <span>
-                                                <svg width="16" height="14" viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M9.52381 11.2728L8.48206 13.0087C8.43209 13.092 8.36139 13.1609 8.27687 13.2088C8.19234 13.2566 8.09686 13.2818 7.99972 13.2818C7.90258 13.2818 7.8071 13.2566 7.72257 13.2088C7.63804 13.1609 7.56735 13.092 7.51738 13.0087L6.47675 11.2728C6.42671 11.1895 6.35596 11.1206 6.27138 11.0728C6.1868 11.025 6.09128 10.9999 5.99413 11H1.8125C1.66332 11 1.52024 10.9407 1.41475 10.8352C1.30926 10.7298 1.25 10.5867 1.25 10.4375V1.4375C1.25 1.28832 1.30926 1.14524 1.41475 1.03975C1.52024 0.934263 1.66332 0.875 1.8125 0.875H14.1875C14.3367 0.875 14.4798 0.934263 14.5852 1.03975C14.6907 1.14524 14.75 1.28832 14.75 1.4375V10.4375C14.75 10.5867 14.6907 10.7298 14.5852 10.8352C14.4798 10.9407 14.3367 11 14.1875 11H10.0059C9.90881 11 9.81341 11.0252 9.72894 11.073C9.64446 11.1208 9.5738 11.1896 9.52381 11.2728V11.2728Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                            65 Comments
-                                        </div>
-                                    </div>
-                                    <a href="single-blog.html" class="blog-title font-body--xl-500">Curabitur porttitor orci eget neque accumsan venenatis. Nunc fermentum.</a>
-                                    <a href="single-blog.html">
-                                        Read More
-                                        <span>
-                                            <svg width="17" height="15" viewBox="0 0 17 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M16 7.50049H1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                <path d="M9.95001 1.47559L16 7.49959L9.95001 13.5246" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                            </svg>
-                                        </span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div></div>
-                    <div class="swiper-pagination swiper-pagination-clickable swiper-pagination-bullets swiper-pagination-bullets-dynamic" style="width: 40px;"><span class="swiper-pagination-bullet swiper-pagination-bullet-active swiper-pagination-bullet-active-main" tabindex="0" role="button" aria-label="Go to slide 1" style="left: 8px;"></span><span class="swiper-pagination-bullet swiper-pagination-bullet-active-next" tabindex="0" role="button" aria-label="Go to slide 2" style="left: 8px;"></span><span class="swiper-pagination-bullet swiper-pagination-bullet-active-next-next" tabindex="0" role="button" aria-label="Go to slide 3" style="left: 8px;"></span></div>
-                <span class="swiper-notification" aria-live="assertive" aria-atomic="true"></span></div>
+                        </a>
+                    </div>
+                </div>
             </div>
-        </section>
+        </div>
 
-<section class="call-to-action section--gray">
-            <div class="container">
-                <div class="newsletter newsletter--one">
-                    <div class="newsletter__leftcontent">
-                        <h2 class="font-body--xxxl-600">Subscribe Our Newsletter</h2>
-                        <p class="font-body--md-400">
-                            Pellentesque eu nibh eget mauris congue mattis mattis nec tellus. Phasellus imperdiet elit eu magna.
-                        </p>
+         <!-- Footer Bottom -->
+         <div class="footer__bottom">
+            <!-- Social Icons -->
+            <ul class="social-icon">
+                <?php foreach ($socialLinks as $platform => $data): ?>
+                    <li class="social-icon-link">
+                        <a href="<?php echo Functions::h($data['url']); ?>">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <?php echo $data['icon']; ?>
+                            </svg>
+                        </a>
+                        </li>
+                <?php endforeach; ?>
+            </ul>
+
+            <!-- Copyright -->
+            <p class="footer__copyright-text">
+                AgriKonnect © <?php echo date('Y'); ?>. All Rights Reserved
+            </p>
+
+            <!-- Payment Partners -->
+            <div class="footer__partner d-flex">
+                <?php foreach ($paymentPartners as $partner => $image): ?>
+                    <a href="#" class="footer__partner-item">
+                        <img src="<?php echo Functions::h($image); ?>" alt="<?php echo Functions::h($partner); ?> payment" />
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Newsletter Modal -->
+<?php if (!isset($_COOKIE['newsletter_dismissed'])): ?>
+<div class="modal fade newsletter-popup" id="newsletter" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="row newsletter-popup__content">
+                    <div class="col-lg-5">
+                        <div class="newsletter-popup__img-wrapper">
+                            <img src="/images/newsletter-bg.jpg" alt="Subscribe to our newsletter" />
+                        </div>
                     </div>
-                    <div class="newsletter__rightcontent">
-                        <form action="#">
-                            <div class="newsletter__input">
-                                <input type="text" placeholder="Your Email Address">
-                                <button class="button button--lg" type="submit">
-                                    Subscribe
-                                </button>
-                            </div>
-                        </form>
-                        <ul class="newsletter__social-icon">
-                            <li>
-                                <a href="#">
-                                    <svg width="10" height="18" viewBox="0 0 10 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M7.99764 2.98875H9.64089V0.12675C9.35739 0.08775 8.38239 0 7.24689 0C4.87764 0 3.25464 1.49025 3.25464 4.22925V6.75H0.640137V9.9495H3.25464V18H6.46014V9.95025H8.96889L9.36714 6.75075H6.45939V4.5465C6.46014 3.62175 6.70914 2.98875 7.99764 2.98875Z" fill="currentColor"></path>
-                                    </svg>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#">
-                                    <svg width="18" height="16" viewBox="0 0 18 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M18 2.41888C17.3306 2.7125 16.6174 2.90713 15.8737 3.00163C16.6388 2.54488 17.2226 1.82713 17.4971 0.962C16.7839 1.38725 15.9964 1.68763 15.1571 1.85525C14.4799 1.13413 13.5146 0.6875 12.4616 0.6875C10.4186 0.6875 8.77387 2.34575 8.77387 4.37863C8.77387 4.67113 8.79862 4.95238 8.85938 5.22013C5.7915 5.0705 3.07687 3.60013 1.25325 1.36025C0.934875 1.91263 0.748125 2.54488 0.748125 3.2255C0.748125 4.5035 1.40625 5.63638 2.38725 6.29225C1.79437 6.281 1.21275 6.10888 0.72 5.83775C0.72 5.849 0.72 5.86363 0.72 5.87825C0.72 7.6715 1.99912 9.161 3.6765 9.50413C3.37612 9.58625 3.04875 9.62563 2.709 9.62563C2.47275 9.62563 2.23425 9.61213 2.01038 9.56263C2.4885 11.024 3.84525 12.0984 5.4585 12.1333C4.203 13.1154 2.60888 13.7071 0.883125 13.7071C0.5805 13.7071 0.29025 13.6936 0 13.6565C1.63462 14.7106 3.57188 15.3125 5.661 15.3125C12.4515 15.3125 16.164 9.6875 16.164 4.81175C16.164 4.64863 16.1584 4.49113 16.1505 4.33475C16.8829 3.815 17.4982 3.16588 18 2.41888Z" fill="currentColor"></path>
-                                    </svg>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#">
-                                    <svg width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M8.24471 0C3.31136 0 0.687744 3.16139 0.687744 6.60855C0.687744 8.20724 1.58103 10.2008 3.01097 10.8331C3.22811 10.931 3.34624 10.8894 3.39462 10.688C3.43737 10.535 3.62525 9.79807 3.71638 9.45042C3.74451 9.33904 3.72988 9.24229 3.63988 9.13766C3.16511 8.58864 2.78821 7.58847 2.78821 6.65017C2.78821 4.24594 4.69967 1.91146 7.9522 1.91146C10.7648 1.91146 12.7325 3.73854 12.7325 6.35204C12.7325 9.30529 11.1698 11.3484 9.13912 11.3484C8.0152 11.3484 7.17816 10.4663 7.44367 9.37505C7.76431 8.07561 8.39321 6.6783 8.39321 5.74113C8.39321 4.90072 7.91844 4.20544 6.94865 4.20544C5.80447 4.20544 4.87631 5.33837 4.87631 6.85943C4.87631 7.82585 5.21832 8.47838 5.21832 8.47838C5.21832 8.47838 4.08652 13.0506 3.87614 13.9045C3.52062 15.3502 3.92451 17.6914 3.95939 17.8928C3.98077 18.0042 4.10565 18.0391 4.1754 17.9479C4.28678 17.8017 5.65484 15.8497 6.03848 14.4389C6.17799 13.9248 6.75064 11.84 6.75064 11.84C7.12753 12.5207 8.21546 13.0911 9.37426 13.0911C12.8214 13.0911 15.3123 10.0613 15.3123 6.30141C15.2999 2.69675 12.215 0 8.24471 0Z" fill="currentColor"></path>
-                                    </svg>
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#">
-                                    <svg width="25" height="18" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12.0027 24.0548C8.72269 24.0548 8.33602 24.0375 7.05602 23.9815C6.05785 23.9487 5.07259 23.7458 4.14269 23.3815C3.34693 23.0718 2.62426 22.6 2.02058 21.9961C1.4169 21.3922 0.945397 20.6694 0.636019 19.8735C0.28576 18.9402 0.0968427 17.9542 0.0773522 16.9575C0.00268554 15.6802 0.00268555 15.2615 0.00268555 12.0068C0.00268555 8.7175 0.0200189 8.3335 0.0773522 7.06017C0.0972691 6.06486 0.28618 5.08018 0.636019 4.14817C0.945042 3.35128 1.41686 2.62761 2.02134 2.02335C2.62583 1.4191 3.34968 0.947556 4.14669 0.638836C5.07821 0.287106 6.06315 0.0976949 7.05869 0.0788358C8.33202 0.0068358 8.75069 0.00683594 12.0027 0.00683594C15.3094 0.00683594 15.6894 0.0241691 16.9494 0.0788358C17.9467 0.0975025 18.936 0.286836 19.8694 0.638836C20.6661 0.947914 21.3898 1.41958 21.9943 2.02379C22.5987 2.628 23.0706 3.35149 23.38 4.14817C23.736 5.09484 23.9267 6.09484 23.9414 7.10417C24.016 8.3815 24.016 8.79883 24.016 12.0522C24.016 15.3055 23.9974 15.7322 23.9414 16.9948C23.9214 17.9924 23.7321 18.9794 23.3814 19.9135C23.0712 20.7099 22.5988 21.4332 21.9942 22.0373C21.3896 22.6414 20.666 23.1133 19.8694 23.4228C18.936 23.7722 17.9507 23.9615 16.9547 23.9815C15.6814 24.0548 15.264 24.0548 12.0027 24.0548ZM11.9574 2.1175C8.69602 2.1175 8.35735 2.1335 7.08402 2.19084C6.32355 2.20078 5.57042 2.34103 4.85735 2.6055C4.33726 2.80486 3.86471 3.11098 3.47017 3.50414C3.07563 3.89731 2.76786 4.36878 2.56669 4.88817C2.30002 5.60817 2.16002 6.3695 2.15202 7.1375C2.08135 8.4295 2.08135 8.76817 2.08135 12.0068C2.08135 15.2068 2.09335 15.5948 2.15202 16.8788C2.16402 17.6388 2.30402 18.3922 2.56669 19.1055C2.97469 20.1548 3.80669 20.9842 4.85869 21.3868C5.57083 21.653 6.32382 21.7933 7.08402 21.8015C8.37469 21.8762 8.71469 21.8762 11.9574 21.8762C15.228 21.8762 15.5667 21.8602 16.8294 21.8015C17.5899 21.7923 18.3432 21.652 19.056 21.3868C19.5733 21.186 20.0432 20.8796 20.4357 20.4873C20.8282 20.095 21.1348 19.6254 21.336 19.1082C21.6027 18.3882 21.7427 17.6255 21.7507 16.8575H21.7654C21.8227 15.5828 21.8227 15.2428 21.8227 11.9855C21.8227 8.72817 21.808 8.3855 21.7507 7.11217C21.7386 6.35278 21.5984 5.60088 21.336 4.88817C21.1353 4.37023 20.8289 3.89977 20.4364 3.50677C20.0438 3.11376 19.5737 2.80682 19.056 2.6055C18.3427 2.33884 17.5894 2.20017 16.8294 2.19084C15.54 2.1175 15.2027 2.1175 11.9574 2.1175ZM12.0027 18.1655C10.7834 18.1663 9.59136 17.8055 8.5772 17.1287C7.56304 16.4519 6.77236 15.4896 6.30517 14.3634C5.83798 13.2373 5.71526 11.9978 5.95254 10.8019C6.18982 9.60598 6.77644 8.50729 7.63819 7.64478C8.49995 6.78228 9.59814 6.19471 10.7939 5.9564C11.9896 5.71808 13.2291 5.83973 14.3557 6.30594C15.4823 6.77216 16.4453 7.56201 17.1229 8.57558C17.8006 9.58916 18.1624 10.7809 18.1627 12.0002C18.1606 13.6337 17.5111 15.1999 16.3565 16.3555C15.2018 17.5111 13.6363 18.162 12.0027 18.1655ZM12.0027 7.9975C11.2116 7.9975 10.4382 8.2321 9.78041 8.67162C9.12261 9.11115 8.60992 9.73586 8.30717 10.4668C8.00442 11.1977 7.9252 12.0019 8.07954 12.7779C8.23388 13.5538 8.61485 14.2665 9.17426 14.8259C9.73367 15.3853 10.4464 15.7663 11.2223 15.9206C11.9982 16.075 12.8025 15.9958 13.5334 15.693C14.2643 15.3903 14.889 14.8776 15.3286 14.2198C15.7681 13.562 16.0027 12.7886 16.0027 11.9975C16.0002 10.9374 15.578 9.92141 14.8284 9.1718C14.0788 8.42219 13.0628 7.99997 12.0027 7.9975ZM18.4027 7.04683C18.2139 7.04613 18.0272 7.00826 17.8531 6.93538C17.6789 6.8625 17.5209 6.75604 17.3879 6.62208C17.1193 6.35153 16.9693 5.98537 16.9707 5.60417C16.9721 5.22296 17.1249 4.85793 17.3954 4.58938C17.666 4.32083 18.0321 4.17075 18.4134 4.17217C18.7946 4.17358 19.1596 4.32637 19.4281 4.59693C19.6967 4.86748 19.8468 5.23363 19.8454 5.61484C19.8439 5.99604 19.6912 6.36107 19.4206 6.62962C19.15 6.89817 18.7839 7.04825 18.4027 7.04683Z" fill="currentColor"></path>
-                                    </svg>
-                                </a>
-                            </li>
-                        </ul>
+                    <div class="col-lg-7">
+                        <div class="newsletter-popup__text-content">
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <h5 class="font-title--xl">Subscribe to Our Newsletter</h5>
+                            <p class="font-body--lg">
+                                Subscribe to our newsletter and save <span>20%</span> on your first order with our discount code!
+                            </p>
+
+                            <form action="/newsletter/subscribe" method="POST" id="newsletterForm">
+                                <div class="contact-mail">
+                                    <input type="email" name="email" placeholder="Enter your email" required />
+                                    <button type="submit" class="button button--md">Subscribe</button>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="doNotShowNewsletter" />
+                                    <label class="form-check-label font-body--md-400" for="doNotShowNewsletter">
+                                        Do not show this window again
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
-        </section>
-<footer class="footer footer--one">
-            <div class="container">
-                <div class="footer__top">
-                    <div class="row">
-                        <!-- Brand information-->
-                        <div class="col-lg-4">
-                            <div class="footer__brand-info">
-                                <div class="footer__brand-info-logo">
-                                    <img src="/images/logo-nl-white.png" alt="logo">
-                                </div>
-                                <p class="font-body--md-400">
-                                    Morbi cursus eget bibendum magna congue nec.
-                                </p>
-                                <div class="footer__brand-info-contact">
-                                    <a href="#"><span>(219)555-0114</span></a>
-                                    or
-                                    <a href="#"><span>Proxy@gmail.com</span></a>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- My Account  -->
-                        <div class="col-lg-2 col-md-3 col-6">
-                            <ul class="footer__navigation">
-                                <li class="footer__navigation-title">
-                                    <h2 class="font-body--lg-500">My Account</h2>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> My Account </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> order History </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Shoping Cart </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Wishlist </a>
-                                </li>
-                            </ul>
-                        </div>
-                        <!-- Helps  -->
-                        <div class="col-lg-2 col-md-3 col-6">
-                            <ul class="footer__navigation">
-                                <li class="footer__navigation-title">
-                                    <h2 class="font-body--lg-500">My Helps</h2>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Contact </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> faq </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Terms &amp; Condition </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Privacy Policy </a>
-                                </li>
-                            </ul>
-                        </div>
-                        <!-- Proxy -->
-                        <div class="col-lg-2 col-md-3 col-6">
-                            <ul class="footer__navigation">
-                                <li class="footer__navigation-title">
-                                    <h2 class="font-body--lg-500">Proxy</h2>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> About </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Shop </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Product </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Track Order </a>
-                                </li>
-                            </ul>
-                        </div>
-                        <!-- Categories -->
-                        <div class="col-lg-2 col-md-3 col-6">
-                            <ul class="footer__navigation">
-                                <li class="footer__navigation-title">
-                                    <h2 class="font-body--lg-500">Categories</h2>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Fruit &amp; Vegetables </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Meat &amp; Fish </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Bread &amp; Bakery </a>
-                                </li>
-                                <li class="footer__navigation-link">
-                                    <a href="#"> Beauty &amp; Health </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="footer__bottom">
-                    <p class="footer__copyright-text">
-                        Shopery eCommerce © 2021. All Rights Reserved
-                    </p>
-                    <div class="footer__partner d-flex">
-                        <a href="#" class="footer__partner-item">
-                            <img src="/images/brand-icon/img-01.png" alt="img">
-                        </a>
-                        <a href="#" class="footer__partner-item">
-                            <img src="/images/brand-icon/img-02.png" alt="img">
-                        </a>
-                        <a href="#" class="footer__partner-item">
-                            <img src="/images/brand-icon/img-03.png" alt="img">
-                        </a>
-                        <a href="#" class="footer__partner-item">
-                            <img src="/images/brand-icon/img-04.png" alt="img">
-                        </a>
-                        <a href="#" class="footer__partner-item">
-                            <img src="/images/brand-icon/img-05.png" alt="img">
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-        </footer>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Core Scripts -->
+<script src="/lib/js/jquery.min.js"></script>
+<script src="/lib/js/bootstrap.bundle.min.js"></script>
+<script src="/lib/js/swiper-bundle.min.js"></script>
+<script src="/lib/js/venobox.min.js"></script>
+
+<!-- Custom Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Newsletter popup handling
+    const newsletterModal = document.getElementById('newsletter');
+    if (newsletterModal) {
+        setTimeout(() => {
+            const modal = new bootstrap.Modal(newsletterModal);
+            modal.show();
+        }, 3000);
+
+        // Handle "Do not show again" checkbox
+        const doNotShowCheckbox = document.getElementById('doNotShowNewsletter');
+        if (doNotShowCheckbox) {
+            doNotShowCheckbox.addEventListener('change', function() {
+                if (this.checked) {
+                    document.cookie = 'newsletter_dismissed=1; path=/; max-age=604800'; // 1 week
+                }
+            });
+        }
+
+        // Handle newsletter form submission
+        const newsletterForm = document.getElementById('newsletterForm');
+        if (newsletterForm) {
+            newsletterForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const email = this.querySelector('input[type="email"]').value;
+                
+                try {
+                    const response = await fetch('/newsletter/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email })
+                    });
+
+                    if (response.ok) {
+                        const modal = bootstrap.Modal.getInstance(newsletterModal);
+                        modal.hide();
+                        // Show success message
+                        alert('Thank you for subscribing!');
+                    } else {
+                        throw new Error('Failed to subscribe');
+                    }
+                } catch (error) {
+                    console.error('Newsletter subscription error:', error);
+                    alert('Sorry, there was an error. Please try again later.');
+                }
+            });
+        }
+    }
+
+    // Initialize VenoBox for modals if needed
+    if (typeof VenoBox !== 'undefined') {
+        new VenoBox({
+            selector: '.venobox'
+        });
+    }
+});
+</script>
+</body>
+</html>
