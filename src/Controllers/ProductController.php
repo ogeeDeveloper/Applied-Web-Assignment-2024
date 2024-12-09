@@ -248,7 +248,7 @@ class ProductController extends BaseController
                     'formatted_price' => 'JMD ' . number_format($product['price_per_unit'], 2),
                     'unit_type' => $product['unit_type'],
                     'farmer_name' => $product['farm_name'],
-                    'location' => $product['location'],
+                    // 'location' => $product['location'],
                     'is_organic' => (bool)$product['organic_certified'],
                     'stock_status' => $this->getStockStatusLabel($product['stock_quantity'], $product['low_stock_alert_threshold']),
                     'category' => $product['category'],

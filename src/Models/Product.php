@@ -32,8 +32,8 @@ class Product
      * @throws \Exception If an error occurs during the file upload process.
      */
 
-    
-    
+
+
 
     public function create(array $data, array $files = null): array
     {
@@ -524,7 +524,6 @@ class Product
                 $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
                 if ($offset !== null) {
                     $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
-                 
                 }
             }
 
@@ -544,12 +543,12 @@ class Product
     }
 
     /**
- * Get product images
- */
-private function getProductImages(int $productId): array 
-{
-    try {
-        $sql = "
+     * Get product images
+     */
+    private function getProductImages(int $productId): array
+    {
+        try {
+            $sql = "
             SELECT 
                 file_id,
                 file_path,
@@ -566,44 +565,44 @@ private function getProductImages(int $productId): array
             AND status = 'active'
             ORDER BY is_primary DESC, created_at DESC";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['product_id' => $productId]);
-        
-        $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Format image data
-        return array_map(function($image) {
-            return [
-                'id' => $image['file_id'],
-                'path' => $image['file_path'],
-                'name' => $image['file_name'],
-                'type' => $image['file_type'],
-                'mime_type' => $image['mime_type'],
-                'is_primary' => (bool)$image['is_primary'],
-                'status' => $image['status'],
-                'upload_date' => $image['upload_date'],
-                'metadata' => json_decode($image['metadata'], true)
-            ];
-        }, $images);
-    } catch (PDOException $e) {
-        $this->logger->error("Error fetching product images: " . $e->getMessage(), [
-            'product_id' => $productId,
-            'error' => $e->getMessage()
-        ]);
-        return [];
-    }
-}
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['product_id' => $productId]);
 
-public function getProductDetails(int $productId) 
-{
-    try {
-        // Validate input
-        if (!$productId || !is_numeric($productId)) {
-            throw new InvalidArgumentException('Invalid product ID');
+            $images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Format image data
+            return array_map(function ($image) {
+                return [
+                    'id' => $image['file_id'],
+                    'path' => $image['file_path'],
+                    'name' => $image['file_name'],
+                    'type' => $image['file_type'],
+                    'mime_type' => $image['mime_type'],
+                    'is_primary' => (bool)$image['is_primary'],
+                    'status' => $image['status'],
+                    'upload_date' => $image['upload_date'],
+                    'metadata' => json_decode($image['metadata'], true)
+                ];
+            }, $images);
+        } catch (PDOException $e) {
+            $this->logger->error("Error fetching product images: " . $e->getMessage(), [
+                'product_id' => $productId,
+                'error' => $e->getMessage()
+            ]);
+            return [];
         }
+    }
 
-        // Build main product query
-        $sql = "
+    public function getProductDetails(int $productId)
+    {
+        try {
+            // Validate input
+            if (!$productId || !is_numeric($productId)) {
+                throw new InvalidArgumentException('Invalid product ID');
+            }
+
+            // Build main product query
+            $sql = "
             SELECT 
                 -- Product basic info
                 p.product_id,
@@ -661,101 +660,100 @@ public function getProductDetails(int $productId)
             LEFT JOIN crop_types ct ON pl.crop_type_id = ct.crop_id
             WHERE p.product_id = :product_id";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['product_id' => $productId]);
-        
-        $product = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$product) {
-            $this->logger->info("Product not found: " . $productId);
-            return null;
-        }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['product_id' => $productId]);
 
-        // Get product images with complete information
-        $images = $this->getProductImages($productId);
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Get chemical usage if planting exists
-        $chemicalUsage = [];
-        if ($product['planting_id']) {
-            $chemicalUsage = $this->getChemicalUsage($product['planting_id']);
-        }
+            if (!$product) {
+                $this->logger->info("Product not found: " . $productId);
+                return null;
+            }
 
-        // Calculate status information
-        $statusInfo = $this->calculateProductStatus($product);
+            // Get product images with complete information
+            $images = $this->getProductImages($productId);
 
-        // Format and return the response
-        return [
-            'basic_info' => [
-                'product_id' => $product['product_id'],
-                'name' => $product['name'],
-                'category' => $product['category'],
-                'description' => $product['description'],
-                'price_per_unit' => floatval($product['price_per_unit']),
-                'unit_type' => $product['unit_type'],
-                'organic_certified' => (bool)$product['organic_certified'],
-                'is_gmo' => (bool)$product['is_gmo'],
-                'created_at' => $product['created_at'],
-                'updated_at' => $product['updated_at'],
-                'images' => $images
-            ],
-            'media' => [
-                'images' => $images,
-                'primary_image' => array_filter($images, fn($img) => $img['is_primary'])[0] ?? null
-            ],
-            'status' => $statusInfo,
-            'farm_info' => [
-                'farmer_id' => $product['farmer_id'],
-                'farmer_name' => $product['farmer_name'],
-                'farm_name' => $product['farm_name'],
-                'location' => $product['farm_location'],
-                'farm_type' => $product['farm_type'],
-                'organic_certified' => (bool)$product['farm_organic_certified']
-            ],
-            'production_info' => [
-                'crop_name' => $product['crop_name'],
-                'crop_category' => $product['crop_category'],
-                'growing_season' => $product['growing_season'],
-                'typical_growth_duration' => $product['typical_growth_duration'],
-                'planting' => [
-                    'planting_id' => $product['planting_id'],
-                    'planting_date' => $product['planting_date'],
-                    'growing_method' => $product['growing_method'],
-                    'soil_preparation' => $product['soil_preparation'],
-                    'irrigation_method' => $product['irrigation_method'],
-                    'field_location' => $product['field_location'],
-                    'weather_conditions' => $product['planting_weather'],
-                    'chemical_usage' => $chemicalUsage
+            // Get chemical usage if planting exists
+            $chemicalUsage = [];
+            if ($product['planting_id']) {
+                $chemicalUsage = $this->getChemicalUsage($product['planting_id']);
+            }
+
+            // Calculate status information
+            $statusInfo = $this->calculateProductStatus($product);
+
+            // Format and return the response
+            return [
+                'basic_info' => [
+                    'product_id' => $product['product_id'],
+                    'name' => $product['name'],
+                    'category' => $product['category'],
+                    'description' => $product['description'],
+                    'price_per_unit' => floatval($product['price_per_unit']),
+                    'unit_type' => $product['unit_type'],
+                    'organic_certified' => (bool)$product['organic_certified'],
+                    'is_gmo' => (bool)$product['is_gmo'],
+                    'created_at' => $product['created_at'],
+                    'updated_at' => $product['updated_at'],
+                    'images' => $images
                 ],
-                'harvest' => [
-                    'harvest_id' => $product['harvest_id'],
-                    'harvest_date' => $product['harvest_date'],
-                    'quantity' => floatval($product['harvest_quantity']),
-                    'quality_grade' => $product['quality_grade'],
-                    'storage_conditions' => $product['storage_conditions'],
-                    'storage_location' => $product['storage_location'],
-                    'loss_quantity' => floatval($product['loss_quantity']),
-                    'loss_reason' => $product['loss_reason']
+                'media' => [
+                    'images' => $images,
+                    'primary_image' => array_filter($images, fn($img) => $img['is_primary'])[0] ?? null
+                ],
+                'status' => $statusInfo,
+                'farm_info' => [
+                    'farmer_id' => $product['farmer_id'],
+                    'farmer_name' => $product['farmer_name'],
+                    'farm_name' => $product['farm_name'],
+                    'location' => $product['farm_location'],
+                    'farm_type' => $product['farm_type'],
+                    'organic_certified' => (bool)$product['farm_organic_certified']
+                ],
+                'production_info' => [
+                    'crop_name' => $product['crop_name'],
+                    'crop_category' => $product['crop_category'],
+                    'growing_season' => $product['growing_season'],
+                    'typical_growth_duration' => $product['typical_growth_duration'],
+                    'planting' => [
+                        'planting_id' => $product['planting_id'],
+                        'planting_date' => $product['planting_date'],
+                        'growing_method' => $product['growing_method'],
+                        'soil_preparation' => $product['soil_preparation'],
+                        'irrigation_method' => $product['irrigation_method'],
+                        'field_location' => $product['field_location'],
+                        'weather_conditions' => $product['planting_weather'],
+                        'chemical_usage' => $chemicalUsage
+                    ],
+                    'harvest' => [
+                        'harvest_id' => $product['harvest_id'],
+                        'harvest_date' => $product['harvest_date'],
+                        'quantity' => floatval($product['harvest_quantity']),
+                        'quality_grade' => $product['quality_grade'],
+                        'storage_conditions' => $product['storage_conditions'],
+                        'storage_location' => $product['storage_location'],
+                        'loss_quantity' => floatval($product['loss_quantity']),
+                        'loss_reason' => $product['loss_reason']
+                    ]
                 ]
-            ]
-        ];
-
-    } catch (Exception $e) {
-        $this->logger->error("Error fetching product details: " . $e->getMessage(), [
-            'product_id' => $productId,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        throw $e;
+            ];
+        } catch (Exception $e) {
+            $this->logger->error("Error fetching product details: " . $e->getMessage(), [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
-}
 
-/**
- * Get chemical usage records for a planting
- */
-private function getChemicalUsage(int $plantingId): array 
-{
-    try {
-        $sql = "
+    /**
+     * Get chemical usage records for a planting
+     */
+    private function getChemicalUsage(int $plantingId): array
+    {
+        try {
+            $sql = "
             SELECT 
                 chemical_name,
                 chemical_type,
@@ -771,12 +769,121 @@ private function getChemicalUsage(int $plantingId): array
             WHERE planting_id = :planting_id
             ORDER BY date_applied DESC";
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute(['planting_id' => $plantingId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        $this->logger->error("Error fetching chemical usage: " . $e->getMessage());
-        return [];
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['planting_id' => $plantingId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->logger->error("Error fetching chemical usage: " . $e->getMessage());
+            return [];
+        }
     }
-}
+
+    public function getPopularProducts(int $limit = 10, ?string $category = null): array
+    {
+        try {
+            $this->logger->info("Fetching popular products", [
+                'limit' => $limit,
+                'category' => $category
+            ]);
+
+            $sql = "
+            SELECT 
+                p.*,
+                fp.farm_name,
+                fp.location as farm_location,
+                COALESCE(order_stats.total_orders, 0) as order_count,
+                COALESCE(order_stats.total_quantity, 0) as total_quantity_sold,
+                COALESCE(order_stats.total_revenue, 0) as total_revenue
+            FROM products p
+            JOIN farmer_profiles fp ON p.farmer_id = fp.farmer_id
+            LEFT JOIN (
+                -- Get order statistics for the last 30 days
+                SELECT 
+                    oi.product_id,
+                    COUNT(DISTINCT o.order_id) as total_orders,
+                    SUM(oi.quantity) as total_quantity,
+                    SUM(oi.total_price) as total_revenue
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE o.ordered_date >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY)
+                AND o.order_status != 'cancelled'
+                GROUP BY oi.product_id
+            ) order_stats ON p.product_id = order_stats.product_id
+            WHERE p.status = 'available'
+            AND p.stock_quantity > 0
+            " . ($category ? "AND p.category = :category" : "") . "
+            ORDER BY 
+                -- Order by sales metrics
+                total_orders DESC,
+                total_revenue DESC,
+                -- Then by stock status (prioritize well-stocked items)
+                CASE 
+                    WHEN p.stock_quantity > p.low_stock_alert_threshold THEN 1
+                    ELSE 2
+                END,
+                -- Finally by creation date
+                p.created_at DESC
+            LIMIT :limit";
+
+            $stmt = $this->db->prepare($sql);
+
+            if ($category) {
+                $stmt->bindValue(':category', $category, PDO::PARAM_STR);
+            }
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+
+            $stmt->execute();
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Get media files for each product
+            foreach ($products as &$product) {
+                // Get product images
+                $product['media'] = $this->mediaManager->getEntityFiles('product', $product['product_id']);
+
+                // Get primary image
+                $product['primary_image'] = array_filter(
+                    $product['media'],
+                    fn($img) => $img['is_primary']
+                )[0] ?? ($product['media'][0] ?? null);
+
+                // Format numerical values
+                $product['price_per_unit'] = floatval($product['price_per_unit']);
+                $product['stock_quantity'] = intval($product['stock_quantity']);
+                $product['total_orders'] = intval($product['order_count']);
+                $product['total_quantity_sold'] = intval($product['total_quantity_sold']);
+                $product['total_revenue'] = floatval($product['total_revenue']);
+
+                // Add computed fields
+                $product['stock_status'] = $this->getStockStatus(
+                    $product['stock_quantity'],
+                    $product['low_stock_alert_threshold']
+                );
+                $product['is_organic'] = (bool)$product['organic_certified'];
+            }
+
+            $this->logger->info("Successfully fetched popular products", [
+                'count' => count($products)
+            ]);
+
+            return $products;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error fetching popular products: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Helper method to determine stock status
+     */
+    private function getStockStatus(int $currentStock, int $threshold): string
+    {
+        if ($currentStock <= 0) {
+            return 'out_of_stock';
+        } elseif ($currentStock <= $threshold) {
+            return 'low_stock';
+        }
+        return 'in_stock';
+    }
 }
