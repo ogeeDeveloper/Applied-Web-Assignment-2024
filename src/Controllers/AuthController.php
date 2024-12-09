@@ -9,12 +9,14 @@ use PDO;
 use PDOException;
 use App\Utils\SessionManager;
 use Exception;
+use App\Services\MailService;
 
 class AuthController extends BaseController
 {
     private User $userModel;
     private $farmerModel;
     private $customerModel;
+    private $mailService;
 
     public function __construct(PDO $db, $logger)
     {
@@ -24,6 +26,7 @@ class AuthController extends BaseController
         $this->logger = $logger;
         $this->farmerModel = new Farmer($db, $logger);
         $this->customerModel = new Customer($db, $logger);
+        $this->mailService = new MailService($logger);
 
         SessionManager::initialize();
     }
@@ -187,8 +190,44 @@ class AuthController extends BaseController
             // Register role-specific profile
             if ($data['role'] === 'farmer') {
                 $this->farmerModel->createFarmerProfile($userId, $data);
+
+                // Send farmer welcome email
+                $emailData = [
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                    'farm_name' => $data['farm_name'],
+                    'location' => $data['location'],
+                    'farm_type' => $data['farm_type'],
+                    'farm_size' => $data['farm_size'],
+                    'farming_experience' => $data['farming_experience'],
+                    'phone_number' => $data['phone_number']
+                ];
+
+                $emailSent = $this->mailService->sendFarmerWelcomeEmail($emailData);
+
+                if (!$emailSent) {
+                    $this->logger->warning("Failed to send farmer welcome email", [
+                        'email' => $data['email']
+                    ]);
+                }
             } elseif ($data['role'] === 'customer') {
                 $this->customerModel->createCustomerProfile($userId, $data);
+
+                // Send customer welcome email
+                $emailData = [
+                    'name' => $data['name'],
+                    'email' => $data['email'],
+                    'phone_number' => $data['phone_number'] ?? null,
+                    'address' => $data['address'] ?? null
+                ];
+
+                $emailSent = $this->mailService->sendCustomerWelcomeEmail($emailData);
+
+                if (!$emailSent) {
+                    $this->logger->warning("Failed to send customer welcome email", [
+                        'email' => $data['email']
+                    ]);
+                }
             }
 
             // Commit transaction
