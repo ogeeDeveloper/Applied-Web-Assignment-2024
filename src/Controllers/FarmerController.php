@@ -375,16 +375,6 @@ class FarmerController extends BaseController
         try {
             $this->validateAuthenticatedRequest();
 
-            // Get farmer_id
-            $userId = $_SESSION['user_id'];
-            $stmt = $this->db->prepare("SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id");
-            $stmt->execute(['user_id' => $userId]);
-            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$farmer) {
-                throw new Exception("Farmer profile not found");
-            }
-
             $input = $this->validateInput([
                 'planting_id' => 'int',
                 'chemical_name' => 'string',
@@ -397,26 +387,74 @@ class FarmerController extends BaseController
                 'weather_conditions' => 'string'
             ]);
 
-            $sql = "INSERT INTO chemical_usage (
-            planting_id, chemical_name, chemical_type,
-            date_applied, purpose, amount_used,
-            unit_of_measurement, safety_period_days,
-            weather_conditions
-        ) VALUES (
-            :planting_id, :chemical_name, :chemical_type,
-            :date_applied, :purpose, :amount_used,
-            :unit_of_measurement, :safety_period_days,
-            :weather_conditions
-        )";
+            // Start transaction
+            $this->db->beginTransaction();
 
-            $stmt = $this->db->prepare($sql);
+            // Verify planting belongs to farmer
+            $stmt = $this->db->prepare("
+            SELECT p.*, ct.name as crop_name, fp.farm_name, u.name as farmer_name, u.email
+            FROM plantings p
+            JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            JOIN farmer_profiles fp ON p.farmer_id = fp.farmer_id
+            JOIN users u ON fp.user_id = u.id
+            WHERE p.planting_id = :planting_id
+            AND fp.user_id = :user_id
+        ");
+            $stmt->execute([
+                'planting_id' => $input['planting_id'],
+                'user_id' => $_SESSION['user_id']
+            ]);
+            $planting = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$planting) {
+                throw new Exception("Invalid planting or unauthorized access");
+            }
+
+            // Insert chemical usage record
+            $stmt = $this->db->prepare("
+            INSERT INTO chemical_usage (
+                planting_id, chemical_name, chemical_type,
+                date_applied, amount_used, unit_of_measurement,
+                safety_period_days, purpose, weather_conditions
+            ) VALUES (
+                :planting_id, :chemical_name, :chemical_type,
+                :date_applied, :amount_used, :unit_of_measurement,
+                :safety_period_days, :purpose, :weather_conditions
+            )
+        ");
             $stmt->execute($input);
+
+            // Prepare email data
+            $emailData = [
+                'farmer_name' => $planting['farmer_name'],
+                'farm_name' => $planting['farm_name'],
+                'crop_name' => $planting['crop_name'],
+                'field_location' => $planting['field_location'],
+                'chemical_name' => $input['chemical_name'],
+                'chemical_type' => $input['chemical_type'],
+                'date_applied' => $input['date_applied'],
+                'amount_used' => $input['amount_used'],
+                'unit_of_measurement' => $input['unit_of_measurement'],
+                'safety_period_days' => $input['safety_period_days'],
+                'safe_harvest_date' => date('Y-m-d', strtotime($input['date_applied'] . ' + ' . $input['safety_period_days'] . ' days'))
+            ];
+
+            // Send email notification
+            $this->mailService->sendTemplateEmail(
+                $planting['email'],
+                'Chemical Application Record',
+                'chemical-usage-notification',
+                $emailData
+            );
+
+            $this->db->commit();
 
             $this->setFlashMessage('Chemical usage recorded successfully', 'success');
             $this->redirect('/farmer/chemical-usage');
         } catch (Exception $e) {
+            $this->db->rollBack();
             $this->logger->error("Error recording chemical usage: " . $e->getMessage());
-            $this->setFlashMessage('Failed to record chemical usage', 'error');
+            $this->setFlashMessage('Failed to record chemical usage: ' . $e->getMessage(), 'error');
             $this->redirectWithInput('/farmer/chemical-usage', $_POST);
         }
     }
@@ -511,21 +549,58 @@ class FarmerController extends BaseController
     public function chemicalUsage(): void
     {
         try {
-            $farmerId = $_SESSION['user_id'];
+            // Get the farmer_id for the logged-in user
+            $stmt = $this->db->prepare("
+            SELECT farmer_id 
+            FROM farmer_profiles 
+            WHERE user_id = :user_id
+        ");
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+            $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Get current plantings for dropdown
-            $plantings = $this->plantingModel->getCurrentPlantings($farmerId);
+            if (!$farmer) {
+                throw new Exception("Farmer profile not found");
+            }
 
-            // Get chemical records
-            $chemicalRecords = $this->chemicalUsageModel->getRecentUsage($farmerId);
+            // Get active plantings with crop names
+            $stmt = $this->db->prepare("
+            SELECT 
+                p.planting_id,
+                p.field_location,
+                p.planting_date,
+                ct.name as crop_name,
+                p.status
+            FROM plantings p
+            JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            WHERE p.farmer_id = :farmer_id
+            AND p.status IN ('planted', 'growing')
+            ORDER BY p.planting_date DESC
+        ");
+            $stmt->execute(['farmer_id' => $farmer['farmer_id']]);
+            $plantings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Get chemical usage records
+            $stmt = $this->db->prepare("
+            SELECT 
+                cu.*,
+                ct.name as crop_name,
+                p.field_location
+            FROM chemical_usage cu
+            JOIN plantings p ON cu.planting_id = p.planting_id
+            JOIN crop_types ct ON p.crop_type_id = ct.crop_id
+            WHERE p.farmer_id = :farmer_id
+            ORDER BY cu.date_applied DESC
+        ");
+            $stmt->execute(['farmer_id' => $farmer['farmer_id']]);
+            $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $this->render('farmer/chemical-usage', [
                 'plantings' => $plantings,
-                'records' => $chemicalRecords,
+                'records' => $records,
                 'currentPage' => 'chemical-usage'
             ], 'Chemical Usage Records', 'farmer/layouts/farmer');
-        } catch (\Exception $e) {
-            $this->logger->error("Error loading chemical usage: " . $e->getMessage());
+        } catch (Exception $e) {
+            $this->logger->error("Error loading chemical usage page: " . $e->getMessage());
             $this->setFlashMessage('Error loading chemical records', 'error');
             $this->redirect('/farmer/dashboard');
         }
