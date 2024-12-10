@@ -148,7 +148,7 @@ $title = "Account Settings | AgriFarm";
         const form = this;
         const formData = new FormData(form);
 
-        // Add organic_certified if unchecked (forms don't submit unchecked checkboxes)
+        // Add organic_certified if unchecked
         if (!formData.has('organic_certified')) {
             formData.append('organic_certified', '0');
         }
@@ -164,10 +164,16 @@ $title = "Account Settings | AgriFarm";
                     messageDiv.className = 'alert alert-success';
                     messageDiv.textContent = data.message || 'Profile updated successfully';
 
-                    // Optionally reload the page after successful update
+                    if (data.redirect) {
+                        setTimeout(() => {
+                            window.location.href = data.redirect;
+                        }, 1500);
+                    }
+
+                    // Redirect back to account settings page after successful update
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+                        window.location.href = '/farmer/account-settings';
+                    }, 1500); // Wait 1.5 seconds so user can see success message
                 } else {
                     messageDiv.className = 'alert alert-danger';
                     messageDiv.textContent = data.message || 'Failed to update profile';
