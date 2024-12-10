@@ -75,6 +75,7 @@ return [
         'GET /farmer/chemical-usage' => ['FarmerController', 'chemicalUsage'],
         'GET /farmer/record-activity' => ['FarmerController', 'recordActivity'],
         'GET /farmer/account-settings' => ['FarmerController', 'accountSettings'],
+        'POST /farmer/update-profile' => ['FarmerController', 'updateProfile'],
         'POST /farmer/logout' => ['FarmerController', 'logout'],
         'POST /farmer/add-crop' => ['FarmerController', 'addCrop'],
         'POST /farmer/record-chemical' => ['FarmerController', 'recordChemicalUsage'],

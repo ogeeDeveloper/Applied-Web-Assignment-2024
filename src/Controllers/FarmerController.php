@@ -13,6 +13,7 @@ use Exception;
 use App\Utils\SessionManager;
 use App\Models\User;
 use App\Models\MediaManager;
+use App\Services\MailService;
 
 class FarmerController extends BaseController
 {
@@ -24,6 +25,7 @@ class FarmerController extends BaseController
     private $cropModel;
     private $userModel;
     private MediaManager $mediaManager;
+    private MailService $mailService;
 
     public function __construct(PDO $db, $logger)
     {
@@ -36,6 +38,7 @@ class FarmerController extends BaseController
         $this->cropModel = new Crop($db, $logger);
         $this->userModel = new User($db, $logger);
         $this->mediaManager = new MediaManager($db, $logger);
+        $this->mailService = new MailService($logger);
     }
 
     public function index(): void
@@ -236,6 +239,7 @@ class FarmerController extends BaseController
         try {
             $this->validateAuthenticatedRequest();
 
+            // Validate input
             $input = $this->validateInput([
                 'farm_name' => 'string',
                 'location' => 'string',
@@ -247,17 +251,91 @@ class FarmerController extends BaseController
                 'phone_number' => 'string'
             ]);
 
+            // Get current profile data for comparison
+            $stmt = $this->db->prepare("
+            SELECT fp.*, u.name, u.email 
+            FROM farmer_profiles fp
+            JOIN users u ON fp.user_id = u.id
+            WHERE fp.user_id = :user_id
+        ");
+            $stmt->execute(['user_id' => $_SESSION['user_id']]);
+            $currentProfile = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$currentProfile) {
+                throw new Exception("Farmer profile not found");
+            }
+
+            // Track changes
+            $changes = [];
+            $fieldLabels = [
+                'farm_name' => 'Farm Name',
+                'location' => 'Location',
+                'farm_type' => 'Farm Type',
+                'farm_size' => 'Farm Size',
+                'farming_experience' => 'Farming Experience',
+                'primary_products' => 'Primary Products',
+                'organic_certified' => 'Organic Certification',
+                'phone_number' => 'Phone Number'
+            ];
+
+            foreach ($input as $field => $newValue) {
+                $oldValue = $currentProfile[$field];
+                if ($field === 'organic_certified') {
+                    $oldValue = (bool)$oldValue;
+                    $newValue = (bool)$newValue;
+                }
+
+                if ($oldValue !== $newValue) {
+                    $changes[$fieldLabels[$field]] = [
+                        'old' => $oldValue,
+                        'new' => $newValue
+                    ];
+                }
+            }
+
+            // Update profile
             $result = $this->farmerModel->updateProfile(
                 $_SESSION['user_id'],
                 $input
             );
 
-            $this->jsonResponse($result);
+            // Send email notification if there are changes
+            if (!empty($changes)) {
+                $emailData = [
+                    'farmer_name' => $currentProfile['name'],
+                    'email' => $currentProfile['email'],
+                    'changes' => $changes,
+                    'update_time' => date('Y-m-d H:i:s'),
+                    'ip_address' => $_SERVER['REMOTE_ADDR']
+                ];
+
+                $this->mailService->sendTemplateEmail(
+                    $currentProfile['email'],
+                    'Profile Update Notification',
+                    'farmer-profile-update',
+                    $emailData
+                );
+
+                // Log the changes
+                $this->logger->info("Farmer profile updated", [
+                    'user_id' => $_SESSION['user_id'],
+                    'changes' => $changes,
+                    'ip' => $_SERVER['REMOTE_ADDR']
+                ]);
+            }
+
+            $this->jsonResponse([
+                'success' => true,
+                'message' => 'Profile updated successfully',
+                'changes' => $changes
+            ]);
         } catch (Exception $e) {
-            $this->logger->error("Profile update error: " . $e->getMessage());
+            $this->logger->error("Profile update error: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
             $this->jsonResponse([
                 'success' => false,
-                'message' => 'Failed to update profile'
+                'message' => 'Failed to update profile: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -545,8 +623,16 @@ class FarmerController extends BaseController
             $this->validateAuthenticatedRequest();
             $userId = $_SESSION['user_id'];
 
-            // Get farmer_id from farmer_profiles
-            $stmt = $this->db->prepare("SELECT farmer_id FROM farmer_profiles WHERE user_id = :user_id");
+            // Start transaction
+            $this->db->beginTransaction();
+
+            // Get farmer details
+            $stmt = $this->db->prepare("
+            SELECT fp.farmer_id, fp.farm_name, u.name, u.email 
+            FROM farmer_profiles fp
+            JOIN users u ON fp.user_id = u.id
+            WHERE fp.user_id = :user_id
+        ");
             $stmt->execute(['user_id' => $userId]);
             $farmer = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -554,6 +640,7 @@ class FarmerController extends BaseController
                 throw new Exception("Farmer profile not found");
             }
 
+            // Validate input
             $input = $this->validateInput([
                 'crop_type_id' => 'int',
                 'field_location' => 'string',
@@ -566,28 +653,78 @@ class FarmerController extends BaseController
                 'notes' => 'string'
             ]);
 
+            // Get crop type details
+            $stmt = $this->db->prepare("
+            SELECT name, category 
+            FROM crop_types 
+            WHERE crop_id = :crop_id
+        ");
+            $stmt->execute(['crop_id' => $input['crop_type_id']]);
+            $cropType = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Prepare planting data
             $data = array_merge($input, [
                 'farmer_id' => $farmer['farmer_id'],
                 'status' => 'planted'
             ]);
 
-            $stmt = $this->db->prepare("INSERT INTO plantings (
-            farmer_id, crop_type_id, field_location, area_size,
-            area_unit, planting_date, expected_harvest_date,
-            growing_method, soil_preparation, status, notes
-        ) VALUES (
-            :farmer_id, :crop_type_id, :field_location, :area_size,
-            :area_unit, :planting_date, :expected_harvest_date,
-            :growing_method, :soil_preparation, :status, :notes
-        )");
-
+            // Insert planting
+            $stmt = $this->db->prepare("
+            INSERT INTO plantings (
+                farmer_id, crop_type_id, field_location, area_size,
+                area_unit, planting_date, expected_harvest_date,
+                growing_method, soil_preparation, status, notes
+            ) VALUES (
+                :farmer_id, :crop_type_id, :field_location, :area_size,
+                :area_unit, :planting_date, :expected_harvest_date,
+                :growing_method, :soil_preparation, :status, :notes
+            )
+        ");
             $stmt->execute($data);
+            $plantingId = $this->db->lastInsertId();
+
+            // Prepare email data
+            $emailData = [
+                'farmer_name' => $farmer['name'],
+                'email' => $farmer['email'],
+                'farm_name' => $farmer['farm_name'],
+                'crop_name' => $cropType['name'],
+                'crop_category' => $cropType['category'],
+                'field_location' => $input['field_location'],
+                'area_size' => $input['area_size'],
+                'area_unit' => $input['area_unit'],
+                'planting_date' => $input['planting_date'],
+                'expected_harvest_date' => $input['expected_harvest_date'],
+                'growing_method' => $input['growing_method'],
+                'planting_id' => $plantingId
+            ];
+
+            // Send email notification
+            $emailSent = $this->mailService->sendTemplateEmail(
+                $farmer['email'],
+                'New Crop Added to Your Farm',
+                'new-crop-notification',
+                $emailData
+            );
+
+            // Log the action
+            $this->logger->info("New crop added", [
+                'farmer_id' => $farmer['farmer_id'],
+                'planting_id' => $plantingId,
+                'crop_type' => $cropType['name'],
+                'email_sent' => $emailSent
+            ]);
+
+            $this->db->commit();
 
             $this->setFlashMessage('Crop added successfully', 'success');
             $this->redirect('/farmer/manage-crops');
         } catch (Exception $e) {
-            $this->logger->error("Error adding crop: " . $e->getMessage());
-            $this->setFlashMessage('Failed to add crop', 'error');
+            $this->db->rollBack();
+            $this->logger->error("Error adding crop: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->setFlashMessage('Failed to add crop: ' . $e->getMessage(), 'error');
             $this->redirectWithInput('/farmer/manage-crops', $_POST);
         }
     }
