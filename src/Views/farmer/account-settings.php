@@ -53,6 +53,22 @@ $title = "Account Settings | AgriFarm";
                                 </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="farmingExperience">Farming Experience (Years)</label>
+                                    <input type="number" id="farmingExperience" name="farming_experience" class="form-control"
+                                        value="<?php echo htmlspecialchars($farmer['farming_experience']); ?>" required min="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="primaryProducts">Primary Products</label>
+                                    <input type="text" id="primaryProducts" name="primary_products" class="form-control"
+                                        value="<?php echo htmlspecialchars($farmer['primary_products']); ?>" required>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-check mb-3">
                             <input type="checkbox" id="organicCertified" name="organic_certified" class="form-check-input"
                                 <?php echo $farmer['organic_certified'] ? 'checked' : ''; ?>>
@@ -124,3 +140,54 @@ $title = "Account Settings | AgriFarm";
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('updateProfileForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const messageDiv = document.getElementById('updateProfileMessage');
+        const form = this;
+        const formData = new FormData(form);
+
+        // Add organic_certified if unchecked (forms don't submit unchecked checkboxes)
+        if (!formData.has('organic_certified')) {
+            formData.append('organic_certified', '0');
+        }
+
+        fetch('/farmer/update-profile', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                messageDiv.style.display = 'block';
+                if (data.success) {
+                    messageDiv.className = 'alert alert-success';
+                    messageDiv.textContent = data.message || 'Profile updated successfully';
+
+                    // Optionally reload the page after successful update
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    messageDiv.className = 'alert alert-danger';
+                    messageDiv.textContent = data.message || 'Failed to update profile';
+                }
+            })
+            .catch(error => {
+                messageDiv.style.display = 'block';
+                messageDiv.className = 'alert alert-danger';
+                messageDiv.textContent = 'An error occurred. Please try again.';
+                console.error('Error:', error);
+            });
+    });
+
+    // Form validation
+    function validateForm() {
+        const farmingExperience = document.getElementById('farmingExperience').value;
+        if (isNaN(farmingExperience) || farmingExperience < 0) {
+            alert('Please enter a valid number for farming experience');
+            return false;
+        }
+        return true;
+    }
+</script>

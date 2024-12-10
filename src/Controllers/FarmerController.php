@@ -327,7 +327,8 @@ class FarmerController extends BaseController
             $this->jsonResponse([
                 'success' => true,
                 'message' => 'Profile updated successfully',
-                'changes' => $changes
+                'changes' => $changes,
+                'redirect' => '/farmer/account-settings'
             ]);
         } catch (Exception $e) {
             $this->logger->error("Profile update error: " . $e->getMessage(), [
