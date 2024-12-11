@@ -12,12 +12,13 @@ $mainNav = [
     ],
     'Shop' => [
         'url' => '/shop',
-        'submenu' => [
+        'submenu' => null
+        /*'submenu' => [
             'Vegetables' => '/shop/fruits?id=1',
             'Fruits' => '/shop/fruits?id=2',
             'Rice & Grains' => '/shop/rice-grains?id=3',
             'Fresh Products' => '/shop/fresh-products?id=4'
-        ]
+        ]*/
     ],
     'Farmers' => [
         'url' => '/farmers',
@@ -31,14 +32,14 @@ $mainNav = [
         'url' => '/about',
         'submenu' => null
     ],
-    'Contact' => [
-        'url' => '/contact',
-        'submenu' => null
-    ],
-    'Products' => [
-        'url' => '/product_details',
-        'submenu' => null
-    ]
+    // 'Contact' => [
+    //     'url' => '/contact',
+    //     'submenu' => null
+    // ],
+    // 'Products' => [
+    //     'url' => '/product_details',
+    //     'submenu' => null
+    // ]
 
 
 ];
