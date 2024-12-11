@@ -344,12 +344,16 @@ class ProductController extends BaseController
             $this->logger->info("Fetching selected product for product details page");
             $productId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-            // pass the product data to the product detail view (Note: call the Product Model)
-            // $product = $this->productModel->getProductDetails($productId);
-            $product = $this->getPopularProducts(20);
+            if (!$productId) {
+                throw new Exception("Invalid or missing product ID");
+            }
+
+            $product = $this->productModel->getProductDetail($productId);
+
+            $this->logger->info("Product: ", $product);
 
             // Render the view
-            $this->render('products/product_details', $product, 'Product Details - AgriKonnect', 'layouts/main');
+            $this->render('products/product_details', ['product' => $product], 'Product Details - AgriKonnect', 'layouts/main');
         } catch (Exception $e) {
             $this->logger->error("Error rendering product details page: " . $e->getMessage());
             $this->setFlashMessage('Error loading product. Please try again.', 'error');

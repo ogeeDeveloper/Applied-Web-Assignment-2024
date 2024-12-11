@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Exception;
 use PDO;
 
 class Product
@@ -1039,6 +1040,39 @@ class Product
             return $products;
         } catch (\PDOException $e) {
             $this->logger->error("Error fetching popular products: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    public function getProductDetail($productId)
+    {
+        try {
+            $this->logger->info("Fetching product", [
+                'Product Id' => $productId
+            ]);
+
+            $sql = "SELECT * from products WHERE product_id = :productId";
+
+            $stmt = $this->db->prepare($sql);
+
+            $stmt->bindParam(':productId', $productId, PDO::PARAM_INT);
+
+            $stmt->execute();
+            $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$product) {
+                throw new \Exception("Product not found with product id: ", $productId);
+            }
+
+            $this->logger->info("Successfully fetched product", [
+                'count' => count($product)
+            ]);
+
+            return $product;
+        } catch (\PDOException $e) {
+            $this->logger->error("Error fetching product: " . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             throw $e;

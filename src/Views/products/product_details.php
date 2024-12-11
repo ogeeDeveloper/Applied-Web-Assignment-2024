@@ -9,16 +9,16 @@
                         <div class="swiper-container gallery-items-slider">
                             <div class="swiper-wrapper">
                                 <div class="gallery-item swiper-slide">
-                                    <img src="src/images/product-details/img-01.png" alt="Slide 01" />
+                                    <!-- <img src="src/images/product-details/img-01.png" alt="Slide 01" /> -->
                                 </div>
                                 <div class="gallery-item swiper-slide">
-                                    <img src="src/images/product-details/img-02.png" alt="Slide 02" />
+                                    <!-- <img src="src/images/product-details/img-02.png" alt="Slide 02" /> -->
                                 </div>
                                 <div class="gallery-item swiper-slide">
-                                    <img src="src/images/product-details/img-03.png" alt="Slide 03" />
+                                    <!-- <img src="src/images/product-details/img-03.png" alt="Slide 03" /> -->
                                 </div>
                                 <div class="gallery-item swiper-slide">
-                                    <img src="src/images/product-details/img-04.png" alt="Slide 04" />
+                                    <!-- <img src="src/images/product-details/img-04.png" alt="Slide 04" /> -->
                                 </div>
                             </div>
                         </div>
@@ -39,7 +39,7 @@
                     </div>
 
                     <div class="gallery-main-image products__gallery-img--lg">
-                        <img class="product-main-image" src="src/images/product-details/img-01.png" alt="Slide 01" />
+                        <img class="product-main-image" src="<?= htmlspecialchars($product['media_files'] ?? '/images/products/default-product.png') ?>" alt="Product Image" />
                     </div>
                 </div>
             </div>
@@ -47,12 +47,12 @@
                 <!-- Products information -->
                 <div class="products__content">
                     <div class="products__content-title">
-                        <h2 class="font-title--md">Chinese Cabbage</h2>
+                        <h2 class="font-title--md"><?= htmlspecialchars($product['name']) ?></h2>
                         <span class="label stock-in">in Stock</span>
                         <!-- <span class="label stock-out">Stock out</span> -->
                     </div>
                     <div class="products__content-info">
-                        <ul class="ratings">
+                        <!-- <ul class="ratings">
                             <li>
                                 <a href="#">
                                     <svg width="18" height="19" viewBox="0 0 18 19" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -88,8 +88,8 @@
                                             fill="#FF8A00" />
                                     </svg>
                                 </a>
-                            </li>
-                            <li>
+                            </li> -->
+                        <!-- <li>
                                 <a href="#">
                                     <svg width="18" height="19" viewBox="0 0 18 19" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path
@@ -97,30 +97,29 @@
                                             fill="#FF8A00" />
                                     </svg>
                                 </a>
-                            </li>
-                            <li>
+                            </li> -->
+                        <!-- <li>
                                 <a href="#" class="font-body--md-400 review-count">4 Review</a>
-                            </li>
+                            </li> -->
                         </ul>
-                        <span class="dot">.</span>
-                        <h5 class="font-body--md-500">Sku: <span class="counting font-body--md-400">2,51,594</span></h5>
+                        <!-- <span class="dot">.</span>
+                        <h5 class="font-body--md-500">Sku: <span class="counting font-body--md-400">2,51,594</span></h5> -->
                     </div>
 
                     <div class="products__content-price">
-                        <h2 class="font-body--xxxl-500"><del class="font-body--xxl-400">$48.00</del> $17.28</h2>
-                        <span class="label sale-off"> 64% off </span>
+                        <h2 class="font-body--xxxl-500"> $<?= htmlspecialchars($product['price_per_unit']) ?></h2>
                     </div>
                 </div>
                 <!-- brand  -->
                 <div class="products__content">
                     <div class="products__content-brand">
-                        <div class="brand-name">
+                        <!-- <div class="brand-name">
                             <h2 class="font-body--md-400">Brand:</h2>
                             <a href="#" class="brand-name-logo">
                                 <img src="src/images/brand-icon/brand-img.png" alt="brand-img" />
                             </a>
-                        </div>
-                        <div class="social-site">
+                        </div> -->
+                        <!-- <div class="social-site">
                             <h2 class="font-body--md-400">Share item:</h2>
                             <ul class="social-icon">
                                 <li class="social-icon-link">
@@ -160,10 +159,10 @@
                                     </a>
                                 </li>
                             </ul>
-                        </div>
+                        </div> -->
                     </div>
                     <p class="products__content-brand-info font-body--md-400">
-                        Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nulla nibh diam, blandit vel consequat nec, ultrices et ipsum. Nulla varius magna a consequat pulvinar.
+                        <?= htmlspecialchars($product['description'] ?? 'Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Nulla nibh diam, blandit vel consequat nec, ultrices et ipsum. Nulla varius magna a consequat pulvinar.') ?>.
                     </p>
                 </div>
                 <!-- Action button -->
@@ -203,17 +202,7 @@
                 </div>
                 <!-- Tags  -->
                 <div class="products__content">
-                    <h5 class="products__content-category font-body--md-500">Category: <a href="#">Vegetables</a></h5>
-                    <div class="products__content-tags">
-                        <h5 class="font-body--md-500">Tag :</h5>
-                        <div class="products__content-tags-item">
-                            <a href="#" class="font-body--md-400">Vegetables</a>
-                            <a href="#" class="font-body--md-400">Healthy</a>
-                            <a href="#" class="font-body--md-400">Chinese</a>
-                            <a href="#" class="font-body--md-400">Cabbage</a>
-                            <a href="#" class="font-body--md-400">Green Cabbage </a>
-                        </div>
-                    </div>
+                    <h5 class="products__content-category font-body--md-500">Category: <a href="#"><?= $product['category'] ?? 'N/A' ?></a></h5>
                 </div>
             </div>
         </div>
