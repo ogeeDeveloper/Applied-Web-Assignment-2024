@@ -190,18 +190,6 @@ $smallerBanners = [
                     <!-- Popular Products Loop -->
 
                     <section class="popular-products">
-                        <?php
-                        $popularProducts = [
-                            ['id' => 1, 'name' => 'Orange', 'image_url' => '/images/products/img-02.png', 'formatted_price' => '$1.99'],
-                            ['id' => 2, 'name' => 'Sweet Pepper', 'image_url' => '/images/products/img-09.png', 'formatted_price' => '$0.99'],
-                            ['id' => 3, 'name' => 'Apple', 'image_url' => '/images/products/img-01.png', 'formatted_price' => '$1.29'],
-                            ['id' => 4, 'name' => 'Corn', 'image_url' => '/images/products/img-07.png', 'formatted_price' => '$2.49'],
-                            ['id' => 5, 'name' => 'Lettuce', 'image_url' => '/images/products/img-04.png', 'formatted_price' => '$1.59'],
-                            // Add more products up to 68
-                        ];
-                        ?>
-
-
                         <div class="container">
                             <!-- Popular Products Loop -->
                             <div class="popular-products__wrapper">
@@ -209,8 +197,8 @@ $smallerBanners = [
                                     <?php foreach ($popularProducts as $product): ?>
                                         <div class="cards-md">
                                             <div class="cards-md__img-wrapper">
-                                                <a href="product-details.php?id=<?= $product['id']; ?>">
-                                                    <img src="<?php echo $product['image_url']; ?>" alt="img">
+                                                <a href="/product-details/id=<?= $product['id']; ?>">
+                                                    <img src="<?php echo $product['media_files']; ?>" alt="img">
                                                 </a>
 
                                                 <div class="cards-md__favs-list">

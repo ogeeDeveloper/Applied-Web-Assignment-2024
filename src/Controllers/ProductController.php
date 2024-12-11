@@ -254,7 +254,8 @@ class ProductController extends BaseController
                     'category' => $product['category'],
                     'description' => $product['description'],
                     'total_orders' => $product['order_count'] ?? 0,
-                    'quantity_sold' => $product['total_quantity_sold'] ?? 0
+                    'quantity_sold' => $product['total_quantity_sold'] ?? 0,
+                    'media_files' => $product['media_files'] ?? '',
                 ];
             }, $popularProducts);
 
@@ -335,5 +336,11 @@ class ProductController extends BaseController
             $this->setFlashMessage('Error loading products. Please try again.', 'error');
             $this->redirect('/');
         }
+    }
+
+    public function productdetail(): void
+    {
+        // Render the view
+        $this->render('products/product_details', 'Product Details - AgriKonnect', 'layouts/main');
     }
 }
