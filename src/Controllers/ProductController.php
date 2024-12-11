@@ -340,7 +340,18 @@ class ProductController extends BaseController
 
     public function productdetail(): void
     {
-        // Render the view
-        $this->render('products/product_details', 'Product Details - AgriKonnect', 'layouts/main');
+        try {
+            $this->logger->info("Fetching selected product for product details page");
+            $productId = strval($_GET['id']);
+
+            // pass the product data to the product detail view (Note: call the Product Model)
+            $product = $this->productModel->getProductDetails($productId);
+
+            // Render the view
+            $this->render('products/product_details', $product, 'Product Details - AgriKonnect', 'layouts/main');
+        } catch (Exception $e) {
+            $this->logger->error("Error rendering product details page: " . $e->getMessage());
+            $this->setFlashMessage('Error loading product. Please try again.', 'error');
+        }
     }
 }

@@ -202,6 +202,22 @@ class Product
         }
     }
 
+    /**
+     * Retrieves a list of products based on specified criteria.
+     *
+     * This function fetches products from the database, applying pagination,
+     * category filtering, and status filtering. It joins the products table
+     * with the farmers table to include farmer information.
+     *
+     * @param int $page The page number for pagination (default: 1)
+     * @param int $limit The number of products per page (default: 10)
+     * @param string|null $category The category to filter products by (optional)
+     * @param string $status The status of products to retrieve (default: 'available')
+     *
+     * @return array An array of products matching the criteria, each containing
+     *               product details and associated farmer information. Returns
+     *               an empty array if no products are found or if an error occurs.
+     */
     public function getProducts(int $page = 1, int $limit = 10, ?string $category = null, string $status = 'available'): array
     {
         try {
@@ -598,7 +614,7 @@ class Product
         try {
             // Validate input
             if (!$productId || !is_numeric($productId)) {
-                throw new InvalidArgumentException('Invalid product ID');
+                throw new \InvalidArgumentException('Invalid product ID');
             }
 
             // Build main product query
@@ -619,6 +635,7 @@ class Product
                 p.is_gmo,
                 p.created_at,
                 p.updated_at,
+                p.media_files
                 
                 -- Farmer info
                 f.farmer_id,
@@ -680,7 +697,7 @@ class Product
             }
 
             // Calculate status information
-            $statusInfo = $this->calculateProductStatus($product);
+            // $statusInfo = $this->calculateProductStatus($product);
 
             // Format and return the response
             return [
@@ -701,7 +718,7 @@ class Product
                     'images' => $images,
                     'primary_image' => array_filter($images, fn($img) => $img['is_primary'])[0] ?? null
                 ],
-                'status' => $statusInfo,
+                // 'status' => $statusInfo,
                 'farm_info' => [
                     'farmer_id' => $product['farmer_id'],
                     'farmer_name' => $product['farmer_name'],
@@ -737,7 +754,7 @@ class Product
                     ]
                 ]
             ];
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->logger->error("Error fetching product details: " . $e->getMessage(), [
                 'product_id' => $productId,
                 'error' => $e->getMessage(),

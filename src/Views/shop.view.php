@@ -91,7 +91,7 @@ $pageTitle = $data['pageTitle'] ?? 'Shop';
                             <div class="col-md-6 col-lg-4">
                                 <div class="product-item">
                                     <div class="product-item__img">
-                                        <img src="<?= htmlspecialchars($product['primary_image'] ?? '/images/default-product.jpg') ?>"
+                                        <img src="<?= htmlspecialchars($product['media_files'] ?? '/images/products/default-product.png') ?>"
                                             alt="<?= htmlspecialchars($product['name']) ?>" class="img-fluid" />
                                     </div>
                                     <div class="product-item__content">

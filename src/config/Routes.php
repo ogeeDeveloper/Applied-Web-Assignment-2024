@@ -5,7 +5,7 @@ return [
         'GET /' => ['HomeController', 'index'],
 
         'GET /products' => ['ProductController', 'listProducts'],
-        'GET /product-details/id={id}' => ['ProductController', 'productdetail'],
+        'GET /product-details/{id}' => ['ProductController', 'productdetail'],
         'GET /about' => ['HomeController', 'about'],
         'GET /contact' => ['HomeController', 'contact'],
         'GET /shop' => ['ProductController', 'renderShopPage'],
@@ -21,6 +21,7 @@ return [
         // Farmer auth routes
         'GET /register/farmer' => ['AuthController', 'farmerRegistrationForm'],
         // 'POST /farmer/register' => ['AuthController', 'farmerRegister'],
+        'GET /api/auth/farmers/register' => ['AuthController', 'farmerRegistrationForm'],
         'POST /farmer/register' => ['AuthController', 'register'],
         'GET /farmer/login' => ['AuthController', 'farmerLoginForm'],
         'POST /api/auth/login' => ['AuthController', 'apiLogin'],
