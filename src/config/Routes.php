@@ -5,7 +5,7 @@ return [
         'GET /' => ['HomeController', 'index'],
 
         'GET /products' => ['ProductController', 'listProducts'],
-        'GET /product-details/{id}' => ['ProductController', 'productdetail'],
+        'GET /product-details/view' => ['ProductController', 'getProductDetail'],
         'GET /about' => ['HomeController', 'about'],
         'GET /contact' => ['HomeController', 'contact'],
         'GET /shop' => ['ProductController', 'renderShopPage'],

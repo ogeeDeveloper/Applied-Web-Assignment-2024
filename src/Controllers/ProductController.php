@@ -338,14 +338,15 @@ class ProductController extends BaseController
         }
     }
 
-    public function productdetail(): void
+    public function getProductDetail(): void
     {
         try {
             $this->logger->info("Fetching selected product for product details page");
-            $productId = strval($_GET['id']);
+            $productId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
             // pass the product data to the product detail view (Note: call the Product Model)
-            $product = $this->productModel->getProductDetails($productId);
+            // $product = $this->productModel->getProductDetails($productId);
+            $product = $this->getPopularProducts(20);
 
             // Render the view
             $this->render('products/product_details', $product, 'Product Details - AgriKonnect', 'layouts/main');

@@ -106,7 +106,7 @@ $pageTitle = $data['pageTitle'] ?? 'Shop';
                                             <span class="badge <?= $product['stock_status']['class'] ?>">
                                                 <?= htmlspecialchars($product['stock_status']['label']) ?>
                                             </span>
-                                            <a href="/product-details/<?= $product['product_id'] ?>" class="button button--sm">View Details</a>
+                                            <a href="/product-details/view?id=<?= $product['product_id'] ?>" class="button button--sm">View Details</a>
                                         </div>
                                     </div>
                                 </div>

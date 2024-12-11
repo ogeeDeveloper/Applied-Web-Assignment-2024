@@ -197,7 +197,7 @@ $smallerBanners = [
                                     <?php foreach ($popularProducts as $product): ?>
                                         <div class="cards-md">
                                             <div class="cards-md__img-wrapper">
-                                                <a href="/product-details/id=<?= $product['id']; ?>">
+                                                <a href="/product-details/view?id=<?= $product['id']; ?>">
                                                     <img src="<?php echo $product['media_files']; ?>" alt="img">
                                                 </a>
 

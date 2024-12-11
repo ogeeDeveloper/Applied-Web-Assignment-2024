@@ -145,9 +145,19 @@ try {
             try {
                 [$controllerName, $methodName] = $groupRoutes[$route];
                 $controllerClass = "App\\Controllers\\$controllerName";
-                if (isset($matches[1])) {
-                    $params['id'] = $matches[1]; // Product ID from the URL
+
+                // Match dynamic route paterns 
+                preg_match('/\{(\w+)}}/', $route, $matches);
+
+                if (!empty($matches[1])) {
+                    $paramName = $matches[1];
+                    $params[$paramName] = $matches[1];
                 }
+
+                // Extract dynamic parameters from route pattern
+                // if (isset($matches[1])) {
+                //     $params['id'] = $matches[1]; // Product ID from the URL
+                // }
 
                 // Skip middleware for public and auth routes
                 if (
