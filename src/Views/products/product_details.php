@@ -178,7 +178,7 @@
                             </button>
                         </div>
                         <!-- add to cart  -->
-                        <button class="button button--md products__content-action-item">
+                        <button class="button button--md products__content-action-item" onclick="addToCart(<?= $product['product_id'] ?>, 1)">
                             Add to Cart
                             <span>
                                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -209,3 +209,57 @@
     </div>
 </section>
 <!-- Products View Section end  -->
+
+<script>
+    async function addToCart(productId, quantity) {
+        // Get the quantity from the counter input
+        const quantityInput = document.getElementById('counter-btn-counter');
+        const actualQuantity = parseInt(quantityInput.value) || 1;
+
+        try {
+            const response = await fetch('/cart/add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    quantity: actualQuantity
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('Product added to cart');
+                // Optionally refresh the mini cart if you have one
+                // await refreshMiniCart();
+            } else {
+                alert(data.message || 'Error adding to cart');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error adding to cart');
+        }
+    }
+
+    // Add these functions to handle quantity counter
+    function increment() {
+        const input = document.getElementById('counter-btn-counter');
+        const currentValue = parseInt(input.value) || 0;
+        input.value = currentValue + 1;
+    }
+
+    function decrement() {
+        const input = document.getElementById('counter-btn-counter');
+        const currentValue = parseInt(input.value) || 0;
+        if (currentValue > 1) {
+            input.value = currentValue - 1;
+        }
+    }
+
+    // Set initial value for quantity input
+    document.addEventListener('DOMContentLoaded', function() {
+        const input = document.getElementById('counter-btn-counter');
+        input.value = 1; // Set default value to 1
+    });
+</script>

@@ -9,6 +9,10 @@ return [
         'GET /about' => ['HomeController', 'about'],
         'GET /contact' => ['HomeController', 'contact'],
         'GET /shop' => ['ProductController', 'renderShopPage'],
+        'GET /cart' => ['CartController', 'index'],
+        'POST /cart/add' => ['CartController', 'addToCart'],
+        'POST /cart/update' => ['CartController', 'updateCart'],
+        'POST /cart/remove' => ['CartController', 'removeFromCart'],
     ],
     'auth' => [
         // Customer auth routes
