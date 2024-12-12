@@ -200,4 +200,18 @@ class CartManager
             ];
         }
     }
+
+    /**
+     * Clear the entire cart for a user
+     */
+    public function clearCart(int $userId): bool
+    {
+        try {
+            $stmt = $this->db->prepare("DELETE FROM cart_items WHERE user_id = ?");
+            return $stmt->execute([$userId]);
+        } catch (\PDOException $e) {
+            $this->logger->error("Error clearing cart: " . $e->getMessage());
+            return false;
+        }
+    }
 }

@@ -29,9 +29,10 @@ class Order
     public function create(array $data): array
     {
         try {
+            // Start transaction explicitly
             $this->db->beginTransaction();
 
-            // Create the order
+            // Create the order with initial status
             $sql = "INSERT INTO orders (
                 customer_id, total_amount, delivery_address,
                 delivery_notes, order_status, payment_status,
@@ -47,7 +48,7 @@ class Order
                 'customer_id' => $data['customer_id'],
                 'total_amount' => $data['total_amount'],
                 'delivery_address' => $data['delivery_address'],
-                'delivery_notes' => $data['delivery_notes'] ?? null
+                'delivery_notes' => !empty($data['delivery_notes']) ? $data['delivery_notes'] : null
             ]);
 
             $orderId = (int) $this->db->lastInsertId();
@@ -59,25 +60,42 @@ class Order
                 $this->updateProductStock($item['product_id'], $item['quantity']);
             }
 
-            $this->db->commit();
+            // Add initial status history without using status manager
+            $sql = "INSERT INTO order_status_history (
+                order_id, status, changed_by, notes
+            ) VALUES (
+                :order_id, 'pending', :changed_by, :notes
+            )";
 
-            // Initialize order status tracking
-            $this->statusManager->updateOrderStatus(
-                $orderId,
-                'pending',
-                $data['customer_id'],
-                'Order created'
-            );
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([
+                'order_id' => $orderId,
+                'changed_by' => $data['customer_id'],
+                'notes' => 'Order created'
+            ]);
+
+            // If everything is successful, commit the transaction
+            $this->db->commit();
 
             return [
                 'success' => true,
                 'order_id' => $orderId,
                 'message' => 'Order created successfully'
             ];
-        } catch (\Exception $e) {
-            $this->db->rollBack();
+        } catch (\PDOException $e) {
+            // Roll back the transaction on any error
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             $this->logger->error("Error creating order: " . $e->getMessage());
             throw new \Exception("Failed to create order");
+        } catch (\Exception $e) {
+            // Roll back the transaction on any error
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            $this->logger->error("Error creating order: " . $e->getMessage());
+            throw $e;
         }
     }
 
@@ -145,6 +163,24 @@ class Order
             'product_id' => $productId,
             'quantity' => $quantity
         ]);
+
+        // Check if stock is now low
+        $sql = "SELECT stock_quantity, low_stock_alert_threshold 
+                FROM products 
+                WHERE product_id = :product_id";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute(['product_id' => $productId]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($product && $product['stock_quantity'] <= ($product['low_stock_alert_threshold'] ?? 10)) {
+            $sql = "UPDATE products 
+                    SET status = 'out_of_stock' 
+                    WHERE product_id = :product_id";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute(['product_id' => $productId]);
+        }
     }
 
     /**

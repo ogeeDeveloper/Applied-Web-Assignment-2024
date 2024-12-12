@@ -13,6 +13,10 @@ return [
         'POST /cart/add' => ['CartController', 'addToCart'],
         'POST /cart/update' => ['CartController', 'updateCart'],
         'POST /cart/remove' => ['CartController', 'removeFromCart'],
+        'POST /checkout' => ['CartController', 'checkoutItems'],
+        'GET /checkout' => ['CheckoutController', 'index'],
+        'POST /checkout/place-order' => ['CheckoutController', 'placeOrder'],
+        'GET /order/confirmation/{id}' => ['CheckoutController', 'showConfirmation'],
     ],
     'auth' => [
         // Customer auth routes
