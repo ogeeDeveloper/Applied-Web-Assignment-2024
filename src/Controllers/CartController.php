@@ -201,4 +201,26 @@ class CartController extends BaseController
             ], 500);
         }
     }
+
+    public function getCartItems(): void
+    {
+        try {
+            if (isset($_SESSION['user_id'])) {
+                $items = $this->cartManager->getCartItems($_SESSION['user_id']);
+            } else {
+                $items = $_SESSION['cart'] ?? [];
+            }
+
+            $this->jsonResponse([
+                'success' => true,
+                'items' => $items
+            ]);
+        } catch (Exception $e) {
+            $this->logger->error("Error getting cart items: " . $e->getMessage());
+            $this->jsonResponse([
+                'success' => false,
+                'message' => 'Error getting cart items'
+            ], 500);
+        }
+    }
 }
