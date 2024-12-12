@@ -16,7 +16,7 @@ return [
         'POST /checkout' => ['CartController', 'checkoutItems'],
         'GET /checkout' => ['CheckoutController', 'index'],
         'POST /checkout/place-order' => ['CheckoutController', 'placeOrder'],
-        'GET /order/confirmation/{id}' => ['CheckoutController', 'showConfirmation'],
+        'GET /order/confirmation/{orderId}' => ['CheckoutController', 'showConfirmation'],
     ],
     'auth' => [
         // Customer auth routes

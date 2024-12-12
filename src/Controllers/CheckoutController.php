@@ -148,11 +148,20 @@ class CheckoutController extends BaseController
         }
     }
 
-    public function showConfirmation(int $orderId): void
+    public function showConfirmation(array $params): void
     {
         try {
             if (!isset($_SESSION['user_id'])) {
                 $this->redirect('/login');
+                return;
+            }
+
+            // Extract orderId from route parameters
+            $orderId = (int)($params['orderId'] ?? 0);
+
+            if (!$orderId) {
+                $this->setFlashMessage('Invalid order ID', 'error');
+                $this->redirect('/orders');
                 return;
             }
 

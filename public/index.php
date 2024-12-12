@@ -131,6 +131,11 @@ try {
     $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
     $route = $request_method . ' ' . $request_uri;
 
+    $logger->info("Attempting to match route", [
+        'method' => $request_method,
+        'uri' => $request_uri
+    ]);
+
     $logger->info("Processing request", [
         'method' => $request_method,
         'uri' => $request_uri,
@@ -141,103 +146,95 @@ try {
 
     // Process routes by group
     foreach ($routes as $group => $groupRoutes) {
-        if (isset($groupRoutes[$route])) {
-            try {
-                [$controllerName, $methodName] = $groupRoutes[$route];
-                $controllerClass = "App\\Controllers\\$controllerName";
+        foreach ($groupRoutes as $routePattern => $handler) {
+            // Create pattern for comparison
+            $patternAsRegex = $routePattern;
 
-                // Match dynamic route paterns 
-                preg_match('/\{(\w+)}}/', $route, $matches);
+            // Replace route parameters with regex pattern
+            if (strpos($routePattern, '{') !== false) {
+                $patternAsRegex = preg_replace('/\{(\w+)\}/', '(\d+)', $routePattern);
 
-                if (!empty($matches[1])) {
-                    $paramName = $matches[1];
-                    $params[$paramName] = $matches[1];
-                }
+                $logger->info("Dynamic route pattern found", [
+                    'original' => $routePattern,
+                    'regex' => $patternAsRegex
+                ]);
+            }
 
-                // Extract dynamic parameters from route pattern
-                // if (isset($matches[1])) {
-                //     $params['id'] = $matches[1]; // Product ID from the URL
-                // }
+            // Remove the request method from the pattern for comparison
+            $routeWithoutMethod = substr($patternAsRegex, strpos($patternAsRegex, ' ') + 1);
 
-                // Skip middleware for public and auth routes
-                if (
-                    $group === 'public' || $group === 'auth' ||
-                    ($group === 'admin' && in_array($route, [
-                        'GET /admin/login',
-                        'POST /admin/login',
-                        'GET /admin/forgot-password',
-                        'POST /admin/forgot-password'
-                    ]))
-                ) {
-                    $controller = new $controllerClass($db, $logger);
-                    // $controller->$methodName($params['id'])
-                    $controller->$methodName();
-                    $routeHandled = true;
-                    break;
-                }
+            // Convert to regex pattern
+            $routeRegex = '/^' . str_replace('/', '\/', $routeWithoutMethod) . '$/';
 
-                // Handle protected routes
-                SessionManager::initialize();
+            $logger->info("Checking route pattern", [
+                'pattern' => $routePattern,
+                'regex' => $routeRegex,
+                'uri' => $request_uri
+            ]);
 
-                // Check if user is authenticated
-                if (
-                    !isset($_SESSION['user_id']) ||
-                    !isset($_SESSION['user_role']) ||
-                    !isset($_SESSION['is_authenticated']) ||
-                    $_SESSION['is_authenticated'] !== true
-                ) {
-
-                    $loginUrl = getLoginUrlForRole($group);
-
-                    // Prevent redirect loops for login pages
-                    if ($request_uri !== $loginUrl) {
-                        $logger->info("Redirecting unauthenticated user", [
-                            'from' => $request_uri,
-                            'to' => $loginUrl
-                        ]);
-
-                        header("Location: $loginUrl?redirect=" . urlencode($request_uri));
-                        exit;
-                    }
-                }
-
-                // Check role authorization
-                if (!$roleMiddleware->handle($group)()) {
-                    showErrorPage(403, $logger);
-                }
-
-                // Execute controller
-                $controller = new $controllerClass($db, $logger);
-                $controller->$methodName();
-                $routeHandled = true;
-                break;
-            } catch (Exception $e) {
-                $logger->error("Route processing error", [
-                    'message' => $e->getMessage(),
-                    'route' => $route,
-                    'controller' => $controllerName,
-                    'method' => $methodName
+            if (preg_match($routeRegex, $request_uri, $matches)) {
+                $logger->info("Route matched", [
+                    'pattern' => $routePattern,
+                    'matches' => $matches
                 ]);
 
-                if ($e->getCode() === 401) {
-                    showErrorPage(401, $logger);
-                } elseif ($e->getCode() === 403) {
-                    showErrorPage(403, $logger);
-                } else {
+                try {
+                    [$controllerName, $methodName] = $handler;
+                    $controllerClass = "App\\Controllers\\$controllerName";
+
+                    // Extract parameters
+                    $params = [];
+                    if (count($matches) > 1) {
+                        // Get parameter name from original pattern
+                        if (preg_match('/\{(\w+)\}/', $routePattern, $paramMatches)) {
+                            $paramName = $paramMatches[1];
+                            $params[$paramName] = $matches[1];
+
+                            $logger->info("Extracted parameter", [
+                                'name' => $paramName,
+                                'value' => $matches[1]
+                            ]);
+                        }
+                    }
+
+                    // Your existing middleware and authentication code...
+
+                    $controller = new $controllerClass($db, $logger);
+                    $controller->$methodName($params);
+                    $routeHandled = true;
+                    break 2;
+                } catch (Exception $e) {
+                    $logger->error("Route processing error", [
+                        'message' => $e->getMessage(),
+                        'route' => $routePattern,
+                        'controller' => $controllerName,
+                        'method' => $methodName
+                    ]);
+
                     throw $e;
                 }
             }
         }
     }
 
-    // Handle 404 for unmatched routes
+    // If no route was handled, show 404
     if (!$routeHandled) {
-        $logger->warning("Route not found", [
+        $logger->warning("No matching route found", [
             'method' => $request_method,
-            'uri' => $request_uri
+            'uri' => $request_uri,
+            'available_routes' => array_keys($routes)
         ]);
         showErrorPage(404, $logger);
     }
+
+    // Handle 404 for unmatched routes
+    // if (!$routeHandled) {
+    //     $logger->warning("Route not found", [
+    //         'method' => $request_method,
+    //         'uri' => $request_uri
+    //     ]);
+    //     showErrorPage(404, $logger);
+    // }
 } catch (Exception $e) {
     // Log the error
     if (isset($logger)) {
