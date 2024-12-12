@@ -97,7 +97,7 @@ foreach ($cartItems as $item) {
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="cart-table-action-btn d-flex">
-                                        <a href="/shop" class="button button--md button--disable shop">Continue Shopping</a>
+                                        <a href="/shop" class="button button--md button shop">Continue Shopping</a>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

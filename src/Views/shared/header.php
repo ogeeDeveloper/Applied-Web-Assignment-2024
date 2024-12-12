@@ -201,23 +201,23 @@ $currencyOptions = [
 
                             // Update cart items
                             cartItems.innerHTML = data.items.map(item => `
-                    <div class="shopping-cart__product-content-item">
-                        <div class="img-wrapper">
-                            <img src="${item.media_files}" alt="${item.name}" />
-                        </div>
-                        <div class="text-content">
-                            <h5 class="font-body--md-400">${item.name}</h5>
-                            <p class="font-body--md-400">${item.quantity} x <span class="font-body--md-500">$${item.price_at_time}</span></p>
-                        </div>
-                        <button class="delete-item" onclick="removeCartItem(${item.product_id})">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 23C18.0748 23 23 18.0748 23 12C23 5.92525 18.0748 1 12 1C5.92525 1 1 5.92525 1 12C1 18.0748 5.92525 23 12 23Z" stroke="#CCCCCC" stroke-miterlimit="10"/>
-                                <path d="M16 8L8 16" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M16 16L8 8" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
+                <div class="shopping-cart__product-content-item">
+                    <div class="img-wrapper">
+                        <img src="${item.media_files}" alt="${item.name}" />
                     </div>
-                `).join('');
+                    <div class="text-content">
+                        <h5 class="font-body--md-400">${item.name}</h5>
+                        <p class="font-body--md-400">${item.quantity} x <span class="font-body--md-500">$${item.price_at_time.toFixed(2)}</span></p>
+                    </div>
+                    <button class="delete-item" onclick="removeCartItem(${item.product_id})">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 23C18.0748 23 23 18.0748 23 12C23 5.92525 18.0748 1 12 1C5.92525 1 1 5.92525 1 12C1 18.0748 5.92525 23 12 23Z" stroke="#CCCCCC" stroke-miterlimit="10"/>
+                            <path d="M16 8L8 16" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M16 16L8 8" stroke="#666666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            `).join('');
                         }
                     } catch (error) {
                         console.error('Error updating cart:', error);
