@@ -94,7 +94,7 @@ return [
         'POST /farmer/record-harvest' => ['FarmerController', 'recordHarvest'],
     ],
     'protected' => [
-        'GET /customer/dashboard' => ['CustomerController', 'dashboard'],
+        'GET /customer/dashboard' => ['CustomerController', 'index'],
         'GET /farmer/dashboard' => ['FarmerController', 'dashboard'],
     ]
 ];

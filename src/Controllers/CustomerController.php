@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controllers;
 
 use PDO;
@@ -7,14 +8,16 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 
-class CustomerController extends BaseController {
-    private $db;
-    private $logger;
-    private $customerModel;
-    private $orderModel;
-    private $productModel;
+class CustomerController extends BaseController
+{
+    protected $db;
+    protected $logger;
+    protected $customerModel;
+    protected $orderModel;
+    protected $productModel;
 
-    public function __construct(PDO $db, $logger) {
+    public function __construct(PDO $db, $logger)
+    {
         $this->db = $db;
         $this->logger = $logger;
         $this->customerModel = new Customer($db, $logger);
@@ -22,7 +25,8 @@ class CustomerController extends BaseController {
         $this->productModel = new Product($db, $logger);
     }
 
-    public function index(): void {
+    public function index(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
             $this->validateRole('customer');
@@ -41,10 +45,11 @@ class CustomerController extends BaseController {
         }
     }
 
-    public function updateCustomerProfile(array $data): array {
+    public function updateCustomerProfile(array $data): array
+    {
         try {
             $userId = $_SESSION['user_id']; // Assuming the user is logged in
-    
+
             // Handle file upload
             if (!empty($_FILES['profile_picture']['name'])) {
                 $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
@@ -52,26 +57,26 @@ class CustomerController extends BaseController {
                 $uploadDir = __DIR__ . '/../../../storage/uploads/profile_pictures/';
                 $fileName = uniqid() . '_' . basename($_FILES['profile_picture']['name']);
                 $filePath = $uploadDir . $fileName;
-    
+
                 if (!in_array($fileType, $allowedTypes)) {
                     throw new \Exception("Invalid file type. Allowed types are JPEG, PNG, and GIF.");
                 }
-    
+
                 // Move the uploaded file
                 if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $filePath)) {
                     throw new \Exception("Failed to upload profile picture.");
                 }
-    
+
                 $data['profile_picture'] = '/storage/uploads/profile_pictures/' . $fileName;
             }
-    
+
             // Update the customer's profile
             $stmt = $this->db->prepare("UPDATE customer_profiles SET profile_picture = :profile_picture WHERE user_id = :user_id");
             $stmt->execute([
                 ':profile_picture' => $data['profile_picture'],
                 ':user_id' => $userId
             ]);
-    
+
             return [
                 'success' => true,
                 'message' => 'Profile updated successfully'
@@ -83,13 +88,14 @@ class CustomerController extends BaseController {
                 'message' => 'An error occurred during profile update'
             ];
         }
-    }    
+    }
 
-    public function updatePreferences(): void {
+    public function updatePreferences(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
             $this->validateRole('customer');
-            
+
             $input = $this->validateInput([
                 'preferences' => 'json',
                 'address' => 'string',
@@ -111,10 +117,11 @@ class CustomerController extends BaseController {
         }
     }
 
-    public function saveProduct(): void {
+    public function saveProduct(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $input = $this->validateInput([
                 'product_id' => 'int'
             ]);
@@ -137,10 +144,11 @@ class CustomerController extends BaseController {
         }
     }
 
-    public function removeSavedProduct(): void {
+    public function removeSavedProduct(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $input = $this->validateInput([
                 'product_id' => 'int'
             ]);
@@ -163,10 +171,11 @@ class CustomerController extends BaseController {
         }
     }
 
-    public function getOrderHistory(): void {
+    public function getOrderHistory(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?? 1;
             $limit = filter_input(INPUT_GET, 'limit', FILTER_VALIDATE_INT) ?? 10;
 
@@ -189,10 +198,11 @@ class CustomerController extends BaseController {
         }
     }
 
-    public function getCustomerStats(): void {
+    public function getCustomerStats(): void
+    {
         try {
             $this->validateAuthenticatedRequest();
-            
+
             $stats = [
                 'total_orders' => $this->orderModel->getCustomerOrderCount($_SESSION['user_id']),
                 'active_orders' => $this->orderModel->getActiveOrdersCount($_SESSION['user_id']),
@@ -213,8 +223,7 @@ class CustomerController extends BaseController {
     }
 
     public function productDetails(
-        
-        $request): void {
 
-    }
+        $request
+    ): void {}
 }
