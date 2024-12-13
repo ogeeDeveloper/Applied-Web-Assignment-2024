@@ -166,3 +166,13 @@ The following environment variables are used for configuring the MySQL service:
 - Adding a frontend for user interaction.
 - Implementing database migrations with tools like Flyway or Liquibase.
 - Using Docker secrets for more secure password management in production.
+
+## If you want to manually run database migrations run the below command
+```
+docker-compose exec php php /var/www/public/run-migrations.php
+```
+
+## If you don't want to lose your existing data, you can manually run the migration file
+```
+docker-compose exec mysql mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DATABASE -e "source /docker-entrypoint-initdb.d/V*__migration_name.sql"
+```

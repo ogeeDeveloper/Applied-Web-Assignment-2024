@@ -1,1 +1,35 @@
+# Node dependencies (if applicable)
+node_modules/
+
+# Composer dependencies
+vendor/
+
+# Environment files
 .env
+
+# Log files
+storage/logs/
+
+# User uploaded files
+storage/uploads/
+
+# Docker-related files
+docker/php/*.log
+docker/nginx/*.log
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.swp
+*.DS_Store
+Thumbs.db
+
+# IDE specific files
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
+
+/storage/uploads/*
+!/storage/uploads/.gitkeep

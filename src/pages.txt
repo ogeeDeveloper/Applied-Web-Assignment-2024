@@ -1,0 +1,26 @@
+Theme:
+shopery-html-dev
+
+==PAGES==
+
+Common:
+- Homepage
+- Single Product page
+- Checkout page
+- Login page
+- Sign Up Page
+- user-dashboard page
+
+
+Farmer:
+- Manage Products (add product, list products, edit product)
+- Inventory tracking()
+- Schedule delivery(Pickup/delivery)
+- Chemical usage tracking (purpose, type)
+- Farmer Bio page (Upload media such as images of farm)
+
+Customer:
+- Profile page
+- Cart page
+
+

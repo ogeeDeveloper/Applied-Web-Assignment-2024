@@ -1,35 +1,84 @@
 services:
   php:
-    image: php:8.2-fpm
+    build:
+      context: .
+      dockerfile: ./docker/php/Dockerfile
+    container_name: crop_production_php
     volumes:
-      - ./src:/var/www/html
-    ports:
-      - "9000:9000"
-    links:
-      - mysql
+      - ./src:/var/www/src
+      - ./public:/var/www/public
+      - ./config:/var/www/config
+      - ./vendor:/var/www/vendor
+      - ./docker:/var/www/docker
+      - ./.env:/var/www/.env
+      - ./storage/logs:/var/www/storage/logs
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - app-net
+    command: bash /var/www/docker/php/docker-entrypoint.sh
 
   nginx:
     image: nginx:latest
     volumes:
-      - ./src:/var/www/html
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./public:/var/www/public
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./storage/logs/nginx:/var/log/nginx
     ports:
       - "8080:80"
+    networks:
+      - app-net
     depends_on:
       - php
 
   mysql:
-    image: mysql:8.1
+    image: mysql:8.0
+    container_name: crop_production_mysql
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_HOST: "%"
+      TZ: UTC
+    command:
+      [
+        "--character-set-server=utf8mb4",
+        "--collation-server=utf8mb4_unicode_ci",
+        "--default-authentication-plugin=caching_sha2_password",
+        "--bind-address=0.0.0.0",
+        "--skip-name-resolve",
+      ]
+    ports:
+      - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql:/docker-entrypoint-initdb.d
+    networks:
+      - app-net
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: crop_production_phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_USER=${MYSQL_USER}
+      - PMA_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     ports:
-    - "3306:3306"
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
 
 volumes:
   mysql_data: {}
